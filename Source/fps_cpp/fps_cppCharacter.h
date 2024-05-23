@@ -7,7 +7,6 @@
 #include "Logging/LogMacros.h"
 #include "Weapon_Base.h"
 #include "fps_cppCharacter.generated.h"
-#include "fps_cppInterfaces.h"
 
 class USpringArmComponent;
 class UCameraComponent;
@@ -49,6 +48,16 @@ class Afps_cppCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* SprintAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* FireAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AimAction;
+
+	bool bIsAttacking;
+
+	bool bIsAiming;
+
 public:
 	Afps_cppCharacter();
 	
@@ -65,6 +74,13 @@ protected:
 
 	void StopSprint();
 			
+	void Fire();
+
+	void StopFire();
+
+	void Aiming();
+
+	void StopAiming();
 
 protected:
 	// APawn interface

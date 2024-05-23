@@ -53,6 +53,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+	bIsAttacking = false;
 }
 
 void Afps_cppCharacter::BeginPlay()
@@ -101,6 +102,13 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		// Sprinting
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Sprint);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopSprint);
+
+		// Fire
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Fire);
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopFire);
+
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Aiming);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopAiming);
 	}
 	else
 	{
@@ -146,11 +154,49 @@ void Afps_cppCharacter::Look(const FInputActionValue& Value)
 
 void Afps_cppCharacter::Sprint()
 {
-	UE_LOG(LogTemp, Warning, TEXT("running"));
 	GetCharacterMovement()->MaxWalkSpeed = 600.0f;
 }
 
 void Afps_cppCharacter::StopSprint()
 {
 	GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+}
+
+void Afps_cppCharacter::Fire()
+{
+	bIsAttacking = true;
+
+	FVector StartLocation = FollowCamera->GetComponentLocation();
+	FVector EndLocation = StartLocation + GetActorForwardVector() * 5000.0f;
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParams(FName(TEXT("FireTrace")), true, this);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		StartLocation,
+		EndLocation,
+		ECC_Camera,
+		TraceParams
+	);
+
+	if (bHit)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Hit!!"));
+		AActor* HitActor = HitResult.GetActor();
+	}
+}
+
+void Afps_cppCharacter::StopFire()
+{
+	bIsAttacking = false;
+}
+
+void Afps_cppCharacter::Aiming()
+{
+	bIsAiming = true;
+}
+
+void Afps_cppCharacter::StopAiming()
+{
+	bIsAiming = false;
 }
