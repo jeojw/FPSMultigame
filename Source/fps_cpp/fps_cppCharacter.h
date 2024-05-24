@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
-#include "Weapon_Base.h"
 #include "fps_cppCharacter.generated.h"
 
 class USpringArmComponent;
@@ -60,7 +59,6 @@ class Afps_cppCharacter : public ACharacter
 
 public:
 	Afps_cppCharacter();
-	
 
 protected:
 
@@ -82,6 +80,9 @@ protected:
 
 	void StopAiming();
 
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void SprintServer(float MaxWalkSpeed);
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -94,5 +95,7 @@ protected:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	void SprintServer_Implementation(float MaxWalkSpeed);
 };
 

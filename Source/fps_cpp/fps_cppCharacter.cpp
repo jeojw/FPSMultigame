@@ -10,7 +10,6 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "Components/SkeletalMeshComponent.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -100,11 +99,11 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Look);
 
 		// Sprinting
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Sprint);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Sprint);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopSprint);
 
 		// Fire
-		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Fire);
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Fire);
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopFire);
 
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Aiming);
@@ -152,14 +151,42 @@ void Afps_cppCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+void Afps_cppCharacter::SprintServer_Implementation(float MaxWalkSpeed)
+{
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = MaxWalkSpeed;
+	}
+}
+
 void Afps_cppCharacter::Sprint()
 {
-	GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+	if (GetLocalRole() < ROLE_Authority)
+	{
+		SprintServer(600.0f); // 서버로 Sprint 함수를 호출합니다.
+	}
+	else
+	{
+		if (GetCharacterMovement())
+		{
+			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+		}
+	}
 }
 
 void Afps_cppCharacter::StopSprint()
 {
-	GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+	if (GetLocalRole() < ROLE_Authority)
+	{
+		SprintServer(100.0f); // 서버로 Sprint 함수를 호출합니다.
+	}
+	else
+	{
+		if (GetCharacterMovement())
+		{
+			GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+		}
+	}
 }
 
 void Afps_cppCharacter::Fire()
