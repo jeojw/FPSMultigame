@@ -56,6 +56,9 @@ class Afps_cppCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* ReloadAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* DropItemAction;
+
 	bool bIsAttacking;
 
 	bool bIsAiming;
@@ -84,6 +87,8 @@ protected:
 	void StopAiming();
 
 	void Reload();
+
+	void DropItem();
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void SprintServer(float MaxWalkSpeed);
