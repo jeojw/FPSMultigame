@@ -108,6 +108,8 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Aiming);
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopAiming);
+
+		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Reload);
 	}
 	else
 	{
@@ -224,6 +226,11 @@ void Afps_cppCharacter::Aiming()
 }
 
 void Afps_cppCharacter::StopAiming()
+{
+	bIsAiming = false;
+}
+
+void Afps_cppCharacter::Reload()
 {
 	bIsAiming = false;
 }
