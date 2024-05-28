@@ -2,21 +2,8 @@
 
 
 #include "PlayerInterface.h"
-
-class FPS_CPP_API UPlayerInterfaceImplement : public IPlayerInterface
-{
-public:
-    virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform);
-    virtual void IF_GetHandSwayFloats_Implementation(float& SideMove, float& MouseX, float& MouseY);
-    virtual void IF_GetIsAim_Implementation(bool& Aim);
-    virtual void IF_GetStopLeftHandIK_Implementation(bool& StopIK);
-    virtual void IF_GetWallDistance_Implementation(float& Value);
-    virtual void IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp);
-    virtual void IF_GetAnimState_Implementation(UAnimInstance*& AnimState);
-    virtual void IF_GetAimAlpha_Implementation(float& A);
-    virtual void IF_GetLeanBooleans_Implementation(bool& Left, bool& Right);
-    virtual void IF_ReceiveProjectileImpact_Implementation(AActor* HitActor, UActorComponent* HitComponent, const FVector HitLocation, const FVector NormalPoint);
-};
+#include "fps_cppCharacter.h"
+#include "Inventory.h"
 
 void UPlayerInterfaceImplement::IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform)
 {
@@ -43,9 +30,33 @@ void UPlayerInterfaceImplement::IF_GetWallDistance_Implementation(float& Value)
 
 }
 
+bool UPlayerInterfaceImplement::Server_DeleteItem_Validate(AActor* ItemToDelete)
+{
+    return true;
+}
+
+void UPlayerInterfaceImplement::Server_DeleteItem_Implementation(AActor* ItemToDelete)
+{
+    if (ItemToDelete)
+    {
+        ItemToDelete->Destroy();
+    }
+}
+
 void UPlayerInterfaceImplement::IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp)
 {
+    if (Player.IsValid() && PlayerInventory.IsValid()) {
+        if (Player->IsLocallyControlled() && PlayerInventory->Inventory.Num() <= PlayerInventory->MaxItemCount) {
+            PlayerInventory->Inventory.Add(Item);
 
+            if (pickUp) {
+                Server_DeleteItem_Implementation(pickUp);
+            }
+
+            CurrentItemSelection = 0;
+        }
+    }
+    
 }
 
 void UPlayerInterfaceImplement::IF_GetAnimState_Implementation(UAnimInstance*& AnimState)

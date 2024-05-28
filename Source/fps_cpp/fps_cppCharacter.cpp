@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "PlayerInterface.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -53,6 +54,8 @@ Afps_cppCharacter::Afps_cppCharacter()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 	bIsAttacking = false;
+
+	Inventory = CreateDefaultSubobject<UInventory>(TEXT("Inventory"));
 }
 
 void Afps_cppCharacter::BeginPlay()
@@ -155,12 +158,32 @@ void Afps_cppCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+void Afps_cppCharacter::DeleteItemServer_Implementation(AActor* DeleteItem)
+{
+	if (GetLocalRole() < ROLE_Authority) {
+		APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+
+		if (UPlayerInterfaceImplement* playerInterface = Cast<UPlayerInterfaceImplement>(PlayerController->GetCharacter())) {
+			playerInterface->Server_DeleteItem(DeleteItem);
+		}
+	}
+}
+
+bool Afps_cppCharacter::DeleteItemServer_Validate(AActor* DeleteItem)
+{
+	return true;
+}
+
 void Afps_cppCharacter::SprintServer_Implementation(float MaxWalkSpeed)
 {
 	if (GetCharacterMovement())
 	{
 		GetCharacterMovement()->MaxWalkSpeed = MaxWalkSpeed;
 	}
+}
+bool Afps_cppCharacter::SprintServer_Validate(float MaxWalkSpeed) 
+{
+	return true;
 }
 
 void Afps_cppCharacter::Sprint()
@@ -246,4 +269,16 @@ void Afps_cppCharacter::Reload()
 void Afps_cppCharacter::DropItem()
 {
 	bIsAiming = false;
+}
+
+void Afps_cppCharacter::EquiptItem()
+{
+	/*if (IsLocallyControlled()) {
+		if (Inventory->GetInventory().IsValidIndex(PlayerInterface->GetCurrentItemSelection())) {
+
+		}
+		else {
+
+		}
+	}*/
 }
