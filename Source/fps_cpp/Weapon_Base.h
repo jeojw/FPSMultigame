@@ -11,8 +11,15 @@ class FPS_CPP_API AWeapon_Base : public AActor
 {
 	GENERATED_BODY()
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	USkeletalMeshComponent* SkeletalMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	USceneComponent* AimOffset;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	USceneComponent* AimOffset_RedDot;
 	
 public:	
 	// Sets default values for this actor's properties

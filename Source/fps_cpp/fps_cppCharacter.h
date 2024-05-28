@@ -141,6 +141,9 @@ protected:
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetWeaponClassServer(TSubclassOf<AActor> WBase);
 
+	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	void StopLeftHandIKServer(bool StopLeftHandIK);
+
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void SprintServer(float MaxWalkSpeed);
 
@@ -174,6 +177,8 @@ protected:
 
 	void SprintServer_Implementation(float MaxWalkSpeed);
 	bool SprintServer_Validate(float MaxWalkSpeed);
+
+	void StopLeftHandIKServer_Implementation(bool StopLeftHandIK);
 
 	void DeleteItemServer_Implementation(AActor* DeleteItem);
 	bool DeleteItemServer_Validate(AActor* DeleteItem);

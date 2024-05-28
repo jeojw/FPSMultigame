@@ -11,6 +11,12 @@ AWeapon_Base::AWeapon_Base()
 
 	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
 	SkeletalMesh->SetupAttachment(RootComponent);
+
+	AimOffset = CreateDefaultSubobject<USceneComponent>(TEXT("AimOffset"));
+	AimOffset->SetupAttachment(SkeletalMesh);
+
+	AimOffset_RedDot = CreateDefaultSubobject<USceneComponent>(TEXT("AimOffset_RedDot"));
+	AimOffset_RedDot->SetupAttachment(SkeletalMesh);
 }
 
 // Called when the game starts or when spawned
