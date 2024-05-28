@@ -80,6 +80,10 @@ protected:
 			
 	void Fire();
 
+	void RifleFire();
+
+	void PistolFire();
+
 	void StopFire();
 
 	void Aiming();

@@ -197,25 +197,31 @@ void Afps_cppCharacter::Fire()
 {
 	bIsAttacking = true;
 
-	FVector StartLocation = FollowCamera->GetComponentLocation();
-	FVector EndLocation = StartLocation + GetActorForwardVector() * 5000.0f;
-	FHitResult HitResult;
-	FCollisionQueryParams TraceParams(FName(TEXT("FireTrace")), true, this);
-
-	bool bHit = GetWorld()->LineTraceSingleByChannel(
-		HitResult,
-		StartLocation,
-		EndLocation,
-		ECC_Camera,
-		TraceParams
-	);
-
-	if (bHit)
+	/*switch (WeaponType) 
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Hit!!"));
-		AActor* HitActor = HitResult.GetActor();
-	}
+	case ItemType::Pistol:
+		PistolFire();
+		break;
+		
+	case ItemType::Rifle:
+		RifleFire();
+		break;
+
+	default:
+		break;
+	}*/
 }
+
+void Afps_cppCharacter::RifleFire()
+{
+
+}
+
+void Afps_cppCharacter::PistolFire()
+{
+
+}
+
 
 void Afps_cppCharacter::StopFire()
 {
