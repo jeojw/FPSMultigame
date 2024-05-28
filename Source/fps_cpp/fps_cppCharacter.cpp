@@ -11,6 +11,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "PlayerInterface.h"
+#include "Net/UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -50,6 +52,9 @@ Afps_cppCharacter::Afps_cppCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = true; // Camera does not rotate relative to arm
+
+	WeaponBase = CreateDefaultSubobject<UChildActorComponent>(TEXT("WeaponBase"));
+	WeaponBase->SetupAttachment(GetMesh(), FName(TEXT("WeaponSocket")));
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -158,39 +163,11 @@ void Afps_cppCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void Afps_cppCharacter::DeleteItemServer_Implementation(AActor* DeleteItem)
-{
-	if (GetLocalRole() < ROLE_Authority) {
-		APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-
-		if (UPlayerInterfaceImplement* playerInterface = Cast<UPlayerInterfaceImplement>(PlayerController->GetCharacter())) {
-			playerInterface->Server_DeleteItem(DeleteItem);
-		}
-	}
-}
-
-bool Afps_cppCharacter::DeleteItemServer_Validate(AActor* DeleteItem)
-{
-	return true;
-}
-
-void Afps_cppCharacter::SprintServer_Implementation(float MaxWalkSpeed)
-{
-	if (GetCharacterMovement())
-	{
-		GetCharacterMovement()->MaxWalkSpeed = MaxWalkSpeed;
-	}
-}
-bool Afps_cppCharacter::SprintServer_Validate(float MaxWalkSpeed) 
-{
-	return true;
-}
-
 void Afps_cppCharacter::Sprint()
 {
 	if (GetLocalRole() < ROLE_Authority)
 	{
-		SprintServer(600.0f); // 서버로 Sprint 함수를 호출합니다.
+		SprintServer(600.0f);
 	}
 	else
 	{
@@ -205,7 +182,7 @@ void Afps_cppCharacter::StopSprint()
 {
 	if (GetLocalRole() < ROLE_Authority)
 	{
-		SprintServer(100.0f); // 서버로 Sprint 함수를 호출합니다.
+		SprintServer(100.0f);
 	}
 	else
 	{
@@ -220,12 +197,12 @@ void Afps_cppCharacter::Fire()
 {
 	bIsAttacking = true;
 
-	/*switch (WeaponType) 
+	/*switch (WeaponType)
 	{
 	case ItemType::Pistol:
 		PistolFire();
 		break;
-		
+
 	case ItemType::Rifle:
 		RifleFire();
 		break;
@@ -281,4 +258,105 @@ void Afps_cppCharacter::EquiptItem()
 
 		}
 	}*/
+}
+
+void Afps_cppCharacter::DeleteItemServer_Implementation(AActor* DeleteItem)
+{
+	if (GetLocalRole() < ROLE_Authority) {
+		APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+
+		if (UPlayerInterfaceImplement* playerInterface = Cast<UPlayerInterfaceImplement>(PlayerController->GetCharacter())) {
+			playerInterface->Server_DeleteItem(DeleteItem);
+		}
+	}
+}
+
+bool Afps_cppCharacter::DeleteItemServer_Validate(AActor* DeleteItem)
+{
+	return true;
+}
+
+void Afps_cppCharacter::SprintServer_Implementation(float MaxWalkSpeed)
+{
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = MaxWalkSpeed;
+	}
+}
+bool Afps_cppCharacter::SprintServer_Validate(float MaxWalkSpeed) 
+{
+	return true;
+}
+
+void Afps_cppCharacter::PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound)
+{
+	if (GetWorld())
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
+	}
+}
+
+void Afps_cppCharacter::PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound)
+{
+	PlaySoundAtLocationMulticast_Implementation(Location, Sound);
+}
+
+void Afps_cppCharacter::SpawnEmitterAtLocationMulticast_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale)
+{
+	if (GetWorld())
+	{
+		FTransform Transform = FTransform(Rotation, Location, Scale);
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), EmitterTemplate, Transform);
+	}
+}
+
+void Afps_cppCharacter::SpawnEmitterAtLocationServer_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale)
+{
+	SpawnEmitterAtLocationMulticast_Implementation(EmitterTemplate, Location, Rotation, Scale);
+}
+
+void Afps_cppCharacter::SpawnActorToServer_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride)
+{
+	UWorld* World = GetWorld();
+	if (World && *Class)
+	{
+		// Actor를 Spawn합니다.
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = CollisionHandlingOverride;
+		SpawnParams.Instigator = GetInstigator();
+
+		AActor* SpawnedActor = World->SpawnActor<AActor>(Class, SpawnTransform, SpawnParams);
+	}
+}
+
+void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase)
+{
+	/*if (WBase)
+	{
+		CurrentWeaponClass = WBase;
+
+		if ()
+	}*/
+}
+
+void Afps_cppCharacter::SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase)
+{
+	if (WBase)
+	{
+		CurrentWeaponClass = WBase;
+		SetWeaponClassMulticast(WBase);
+	}
+}
+
+bool Afps_cppCharacter::SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase)
+{
+	return true;
+}
+
+void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// CurrentWeaponClass를 네트워크에서 복제되도록 설정
+	DOREPLIFETIME(Afps_cppCharacter, CurrentWeaponClass);
 }

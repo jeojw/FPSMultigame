@@ -8,6 +8,7 @@
 #include "PlayerInterface.h"
 #include "Inventory.h"
 #include "ItemDataTable.h"
+#include "Weapon_Base.h"
 #include "fps_cppCharacter.generated.h"
 
 class USpringArmComponent;
@@ -65,6 +66,12 @@ class Afps_cppCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* DropItemAction;
 
+	UPROPERTY(Replicated)
+	TSubclassOf<AActor> CurrentWeaponClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+	UChildActorComponent* WeaponBase;
+
 	bool bIsAttacking;
 
 	bool bIsAiming;
@@ -113,6 +120,27 @@ protected:
 	UFUNCTION()
 	void EquiptItem();
 
+	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	void PlaySoundAtLocationMulticast(FVector Location, USoundBase* Sound);
+
+	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	void PlaySoundAtLocationServer(FVector Location, USoundBase* Sound);
+
+	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	void SpawnEmitterAtLocationMulticast(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
+
+	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	void SpawnEmitterAtLocationServer(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
+
+	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	void SpawnActorToServer(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void SetWeaponClassMulticast(TSubclassOf<AActor> WBas);
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void SetWeaponClassServer(TSubclassOf<AActor> WBase);
+
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void SprintServer(float MaxWalkSpeed);
 
@@ -132,10 +160,24 @@ protected:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
+	void PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound);
+	void PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound);
+
+	void SpawnEmitterAtLocationMulticast_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
+	void SpawnEmitterAtLocationServer_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
+
+	void SpawnActorToServer_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
+
+	void SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase);
+	void SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase);
+	bool SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase);
+
 	void SprintServer_Implementation(float MaxWalkSpeed);
 	bool SprintServer_Validate(float MaxWalkSpeed);
 
 	void DeleteItemServer_Implementation(AActor* DeleteItem);
 	bool DeleteItemServer_Validate(AActor* DeleteItem);
+
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 };
 

@@ -4,19 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Weapon_Base.generated.h"
+#include "Components/DecalComponent.h" 
+#include "BulletHole.generated.h"
 
 UCLASS()
-class FPS_CPP_API AWeapon_Base : public AActor
+class FPS_CPP_API ABulletHole : public AActor
 {
 	GENERATED_BODY()
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	USkeletalMeshComponent* SkeletalMesh;
+	UDecalComponent* BulletHole;
 	
 public:	
 	// Sets default values for this actor's properties
-	AWeapon_Base();
+	ABulletHole();
 
 protected:
 	// Called when the game starts or when spawned
@@ -25,9 +25,5 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-	USkeletalMeshComponent* GetMesh() const { return SkeletalMesh; }
-	void SetMesh(USkeletalMeshComponent* _mesh) { SkeletalMesh = _mesh; }
 
-	UFUNCTION(BlueprintCallable)
-	void PlayReloadAnimation(UAnimSequence* ReloadAnimation);
 };

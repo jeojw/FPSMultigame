@@ -26,3 +26,11 @@ void AWeapon_Base::Tick(float DeltaTime)
 
 }
 
+void AWeapon_Base::PlayReloadAnimation(UAnimSequence* ReloadAnimation)
+{
+	if (SkeletalMesh && ReloadAnimation)
+	{
+		SkeletalMesh->PlayAnimation(ReloadAnimation, false); // false means not looping
+	}
+}
+
