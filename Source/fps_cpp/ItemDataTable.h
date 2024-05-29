@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/CompositeDataTable.h"
 #include "ItemStruct.h"
+#include "AnimStateEnum.h"
 #include "ItemDataTable.generated.h"
 
 /**
@@ -17,6 +18,9 @@ struct FItemDataTable : public FTableRowBase
 
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FName RowName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FName Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -26,7 +30,7 @@ public:
     EItemTypeEnum Type;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TSubclassOf<AWeapon_Base> WeaponClass;
+    TSubclassOf<AActor> WeaponClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FWeaponStatsStruct Stats;
@@ -35,5 +39,5 @@ public:
     UAnimMontage* ReloadAnimation;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    UAnimInstance* AnimState;
+    EAnimStateEnum AnimState;
 };

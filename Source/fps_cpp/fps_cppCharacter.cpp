@@ -10,8 +10,6 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "PlayerInterface.h"
-#include "Net/UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -58,9 +56,16 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+	bReplicates = true;
+	bAlwaysRelevant = true;
+
+	bIsAiming = false;
+	bStopLeftHandIK = false;
 	bIsAttacking = false;
 
 	Inventory = CreateDefaultSubobject<UInventory>(TEXT("Inventory"));
+
+	bAnimState = EAnimStateEnum::Hands;
 }
 
 void Afps_cppCharacter::BeginPlay()
@@ -250,14 +255,24 @@ void Afps_cppCharacter::DropItem()
 
 void Afps_cppCharacter::EquiptItem()
 {
-	/*if (IsLocallyControlled()) {
+	if (IsLocallyControlled()) {
 		if (Inventory->GetInventory().IsValidIndex(PlayerInterface->GetCurrentItemSelection())) {
-
+			int id = Inventory->GetInventory()[PlayerInterface->GetCurrentItemSelection()].ID;
+			FString fname = FString::FromInt(id);
+			for (int i = 0; i < bItemDataTable.Num(); i++) {
+				if (bItemDataTable[i].RowName == fname) {
+					SetWeaponClassServer(bItemDataTable[i].WeaponClass);
+					SetStatsToServer(bItemDataTable[i].Stats);
+					SetAnimStateServer(bItemDataTable[i].AnimState);
+					SetCurrentStats(bItemDataTable[i].Stats);
+					SetCurrentReloadAnimation(bItemDataTable[i].ReloadAnimation);
+					SetCurrentWeaponClass(bItemDataTable[i].WeaponClass);
+					SetWeaponType(bItemDataTable[i].Type);
+					break;
+				}
+			}
 		}
-		else {
-
-		}
-	}*/
+	}
 }
 
 void Afps_cppCharacter::DeleteItemServer_Implementation(AActor* DeleteItem)
@@ -315,6 +330,20 @@ void Afps_cppCharacter::SpawnEmitterAtLocationServer_Implementation(UParticleSys
 	SpawnEmitterAtLocationMulticast_Implementation(EmitterTemplate, Location, Rotation, Scale);
 }
 
+void Afps_cppCharacter::SetWeaponClass(TSubclassOf<AActor> WBase)
+{
+	if (HasAuthority())
+	{
+		// 서버 권한이 있는 경우 서버 함수를 호출
+		SetWeaponClassMulticast(WBase);
+	}
+	else
+	{
+		// 클라이언트인 경우 서버 함수 호출을 요청
+		SetWeaponClassServer(WBase);
+	}
+}
+
 void Afps_cppCharacter::SpawnActorToServer_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride)
 {
 	UWorld* World = GetWorld();
@@ -331,12 +360,10 @@ void Afps_cppCharacter::SpawnActorToServer_Implementation(TSubclassOf<AActor> Cl
 
 void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase)
 {
-	/*if (WBase)
+	if (WeaponBase && WBase)
 	{
-		CurrentWeaponClass = WBase;
-
-		if ()
-	}*/
+		WeaponBase->SetChildActorClass(WBase);
+	}
 }
 
 void Afps_cppCharacter::SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase)
@@ -353,10 +380,45 @@ bool Afps_cppCharacter::SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase)
 	return true;
 }
 
+void Afps_cppCharacter::StopLeftHandIKServer_Implementation(bool StopLeftHandIK)
+{
+	bStopLeftHandIK = StopLeftHandIK;
+}
+
+void Afps_cppCharacter::SetStatsToServer_Implementation(FWeaponStatsStruct CurrentStats)
+{
+	bCurrentStats = CurrentStats;
+}
+
+void Afps_cppCharacter::OnRep_AnimState() {
+	OnAnimStateChanged.Broadcast();
+}
+
+void Afps_cppCharacter::SetAnimStateServer_Implementation(EAnimStateEnum AnimState)
+{
+	if (AnimState != bAnimState)
+	{
+		bAnimState = AnimState;
+		OnRep_AnimState();
+	}
+}
+
+bool Afps_cppCharacter::SetAnimStateServer_Validate(EAnimStateEnum AnimState)
+{
+	return true;
+}
+
+bool Afps_cppCharacter::SetStatsToServer_Validate(FWeaponStatsStruct CurrentStats)
+{
+	return true;
+}
+
 void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	// CurrentWeaponClass를 네트워크에서 복제되도록 설정
 	DOREPLIFETIME(Afps_cppCharacter, CurrentWeaponClass);
+
+	DOREPLIFETIME(Afps_cppCharacter, bAnimState);
 }

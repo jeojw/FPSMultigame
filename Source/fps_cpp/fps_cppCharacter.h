@@ -9,17 +9,23 @@
 #include "Inventory.h"
 #include "ItemDataTable.h"
 #include "Weapon_Base.h"
+#include "WeaponStatsStruct.h"
+#include "AnimStateEnum.h"
+#include "Net/UnrealNetwork.h"
 #include "fps_cppCharacter.generated.h"
 
 class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class UPlayerInterface;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
-UCLASS(config=Game)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAnimStateChangedEvent);
+
+UCLASS(config = Game)
 class Afps_cppCharacter : public ACharacter
 {
 	GENERATED_BODY()
@@ -67,7 +73,7 @@ class Afps_cppCharacter : public ACharacter
 	UInputAction* DropItemAction;
 
 	UPROPERTY(Replicated)
-	TSubclassOf<AActor> CurrentWeaponClass;
+	TSubclassOf<AActor> bCurrentWeaponClass;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 	UChildActorComponent* WeaponBase;
@@ -76,7 +82,23 @@ class Afps_cppCharacter : public ACharacter
 
 	bool bIsAiming;
 
+	bool bStopLeftHandIK;
+
+	FWeaponStatsStruct bCurrentStats;
+	
+	UAnimMontage* bCurrentReloadAnimation;
+
+	TArray<FItemDataTable> bItemDataTable;
+
 	TWeakObjectPtr<class UPlayerInterfaceImplement> PlayerInterface;
+
+	EItemTypeEnum bWeaponType;
+
+	UPROPERTY(BlueprintAssignable)
+	FAnimStateChangedEvent OnAnimStateChanged;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AnimState, Category = Animation, meta = (AllowPrivateAccess = "true"))
+	EAnimStateEnum bAnimState;
 
 public:
 	Afps_cppCharacter();
@@ -87,8 +109,26 @@ public:
 	bool GetIsAiming() const { return bIsAiming; }
 	void SetIsAiming(bool NewValue) { bIsAiming = NewValue; }
 
+	bool GetIsStopLeftHandIK() const { return bStopLeftHandIK; }
+	void SetIsStopLeftHandIK(bool StopLeftHandIK) { bStopLeftHandIK = StopLeftHandIK; }
+
 	TWeakObjectPtr<class UPlayerInterfaceImplement> GetPlayerInterface() const { return PlayerInterface; }
 	void SetPlayerInterface(TWeakObjectPtr<class UPlayerInterfaceImplement> NewPlayerInterface) { PlayerInterface = NewPlayerInterface; }
+
+	FWeaponStatsStruct GetCurrentStats() const { return bCurrentStats; }
+	void SetCurrentStats(FWeaponStatsStruct CurrentStats) { bCurrentStats = CurrentStats; }
+
+	UAnimMontage* GetCurrentReloadAnimation() const { return bCurrentReloadAnimation; }
+	void SetCurrentReloadAnimation(UAnimMontage* CurrentReloadAnimation) { bCurrentReloadAnimation = CurrentReloadAnimation; }
+
+	TSubclassOf<AActor> GetCurrentWeaponClass() const { return bCurrentWeaponClass; }
+	void SetCurrentWeaponClass(TSubclassOf<AActor> CurrentWeaponClass) { bCurrentWeaponClass = CurrentWeaponClass; }
+
+	EItemTypeEnum GetWeaponType() const { return bWeaponType; }
+	void SetWeaponType(EItemTypeEnum WeaponType) { bWeaponType = WeaponType; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetWeaponClass(TSubclassOf<AActor> WBase);
 
 protected:
 	/** Called for movement input */
@@ -136,13 +176,22 @@ protected:
 	void SpawnActorToServer(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void SetWeaponClassMulticast(TSubclassOf<AActor> WBas);
+	void SetWeaponClassMulticast(TSubclassOf<AActor> WBase);
 
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetWeaponClassServer(TSubclassOf<AActor> WBase);
 
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void SetStatsToServer(FWeaponStatsStruct CurrentStats);
+
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void StopLeftHandIKServer(bool StopLeftHandIK);
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void SetAnimStateServer(EAnimStateEnum AnimState);
+
+	UFUNCTION()
+	void OnRep_AnimState();
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void SprintServer(float MaxWalkSpeed);
@@ -180,9 +229,15 @@ protected:
 
 	void StopLeftHandIKServer_Implementation(bool StopLeftHandIK);
 
+	void SetStatsToServer_Implementation(FWeaponStatsStruct CurrentStats);
+	bool SetStatsToServer_Validate(FWeaponStatsStruct CurrentStats);
+
+	void SetAnimStateServer_Implementation(EAnimStateEnum AnimState);
+	bool SetAnimStateServer_Validate(EAnimStateEnum AnimState);
+
 	void DeleteItemServer_Implementation(AActor* DeleteItem);
 	bool DeleteItemServer_Validate(AActor* DeleteItem);
 
-	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };
 

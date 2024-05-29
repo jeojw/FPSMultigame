@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
 #include "DynamicInventoryItem.h"
+#include "Inventory.h"
 #include "PlayerInterface.generated.h"
 
 // This class does not need to be modified.
@@ -75,25 +76,25 @@ public:
 	TWeakObjectPtr<class UInventory> GetInventory() const { return PlayerInventory; }
 	void SetInventory(TWeakObjectPtr<class UInventory> NewInventory) { PlayerInventory = NewInventory; }
 
-	virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform) override;
+	virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform);
 
-	virtual void IF_GetHandSwayFloats_Implementation(float& SideMove, float& MouseX, float& MouseY) override;
+	virtual void IF_GetHandSwayFloats_Implementation(float& SideMove, float& MouseX, float& MouseY);
 
-	virtual void IF_GetIsAim_Implementation(bool& Aim) override;
+	virtual void IF_GetIsAim_Implementation(bool& Aim);
 
-	virtual void IF_GetStopLeftHandIK_Implementation(bool& StopIK) override;
+	virtual void IF_GetStopLeftHandIK_Implementation(bool& StopIK);
 
-	virtual void IF_GetWallDistance_Implementation(float& Value) override;
+	virtual void IF_GetWallDistance_Implementation(float& Value);
 	
-	virtual bool Server_DeleteItem_Validate(AActor* ItemToDelete) override;
-	virtual void Server_DeleteItem_Implementation(AActor* ItemToDelete) override;
-	virtual void IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp) override;
+	virtual bool Server_DeleteItem_Validate(AActor* ItemToDelete);
+	virtual void Server_DeleteItem_Implementation(AActor* ItemToDelete);
+	virtual void IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp);
 
-	virtual void IF_GetAnimState_Implementation(UAnimInstance*& AnimState) override;
+	virtual void IF_GetAnimState_Implementation(UAnimInstance*& AnimState);
 
-	virtual void IF_GetAimAlpha_Implementation(float& A) override;
+	virtual void IF_GetAimAlpha_Implementation(float& A);
 
-	virtual void IF_GetLeanBooleans_Implementation(bool& Left, bool& Right) override;
+	virtual void IF_GetLeanBooleans_Implementation(bool& Left, bool& Right);
 
-	virtual void IF_ReceiveProjectileImpact_Implementation(AActor* HitActor, UActorComponent* HitComponent, const FVector HitLocation, const FVector NormalPoint) override;
+	virtual void IF_ReceiveProjectileImpact_Implementation(AActor* HitActor, UActorComponent* HitComponent, const FVector HitLocation, const FVector NormalPoint);
 };

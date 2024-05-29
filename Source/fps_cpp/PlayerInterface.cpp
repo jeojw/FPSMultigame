@@ -2,8 +2,6 @@
 
 
 #include "PlayerInterface.h"
-#include "fps_cppCharacter.h"
-#include "Inventory.h"
 
 void UPlayerInterfaceImplement::IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform)
 {
@@ -45,8 +43,8 @@ void UPlayerInterfaceImplement::Server_DeleteItem_Implementation(AActor* ItemToD
 
 void UPlayerInterfaceImplement::IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp)
 {
-    if (Player.IsValid() && PlayerInventory.IsValid()) {
-        if (Player->IsLocallyControlled() && PlayerInventory->Inventory.Num() <= PlayerInventory->MaxItemCount) {
+    /*if (Player.IsValid() && PlayerInventory.IsValid()) {
+        if (Player.Get()->IsLocallyControlled() && PlayerInventory->Inventory.Num() <= PlayerInventory->MaxItemCount) {
             PlayerInventory->Inventory.Add(Item);
 
             if (pickUp) {
@@ -55,7 +53,7 @@ void UPlayerInterfaceImplement::IF_AddItemToInventory_Implementation(const FDyna
 
             CurrentItemSelection = 0;
         }
-    }
+    }*/
     
 }
 

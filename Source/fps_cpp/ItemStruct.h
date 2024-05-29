@@ -6,6 +6,7 @@
 #include "ItemTypeEnum.h"
 #include "Weapon_Base.h"
 #include "WeaponStatsStruct.h"
+#include "AnimStateEnum.h"
 #include "ItemStruct.generated.h"
 
 USTRUCT(BlueprintType)
@@ -17,13 +18,13 @@ public:
 	FName Name;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UTexture2D* icon;
+	UTexture2D* Icon;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EItemTypeEnum Type;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<AWeapon_Base> WeaponClass;
+	TSubclassOf<AActor> WeaponClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FWeaponStatsStruct Stats;
@@ -32,5 +33,5 @@ public:
 	UAnimMontage* ReloadAnimation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UAnimInstance* AnimState;
+	EAnimStateEnum AnimState;
 };
