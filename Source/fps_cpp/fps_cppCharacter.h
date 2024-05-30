@@ -39,7 +39,7 @@ class Afps_cppCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Custom, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UInventory* Inventory;
 	
 	/** MappingContext */
@@ -108,6 +108,15 @@ class Afps_cppCharacter : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = HandSway, meta = (AllowPrivateAccess = "true"))
 	float bMouseY;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	int bCurrentItemSelection;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	FTimerHandle bFireCooldownTimer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<APickUpBase> bCurrentWeaponPickUpClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	FWeaponStatsStruct bCurrentStats;
@@ -184,8 +193,13 @@ public:
 	EItemTypeEnum GetWeaponType() const { return bWeaponType; }
 	void SetWeaponType(EItemTypeEnum WeaponType) { bWeaponType = WeaponType; }
 
+	int GetCurrentItemSelection() const { return bCurrentItemSelection; }
+	void SetCurrentItemSelection(int CurItem) { bCurrentItemSelection = CurItem; }
+
 	UFUNCTION(BlueprintCallable)
 	void SetWeaponClass(TSubclassOf<AActor> WBase);
+
+	void DelayedFunction();
 
 public:
 	/** Called for movement input */
@@ -214,10 +228,10 @@ public:
 
 	void DropItem();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void EquiptItem();
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void ReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
@@ -271,6 +285,9 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void DeleteItemServer(AActor* DeleteItem);
 
+	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	void ApplyDamageServer(AActor* DamageActor, float BaseDamage, AActor* DamageCauser);
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -319,6 +336,8 @@ protected:
 
 	void DeleteItemServer_Implementation(AActor* DeleteItem);
 	bool DeleteItemServer_Validate(AActor* DeleteItem);
+
+	void ApplyDamageServer_Implementation(AActor* DamageActor, float BaseDamage, AActor* DamageCauser);
 
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

@@ -77,7 +77,7 @@ void Afps_cppCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
-	/*EquiptItem();*/
+	EquiptItem();
 }
 
 void Afps_cppCharacter::Tick(float DeltaTime)
@@ -207,24 +207,33 @@ void Afps_cppCharacter::Fire()
 {
 	bIsAttacking = true;
 
-	/*switch (WeaponType)
+	switch (bWeaponType)
 	{
-	case ItemType::Pistol:
+	case EItemTypeEnum::Pistol:
 		PistolFire();
 		break;
 
-	case ItemType::Rifle:
+	case EItemTypeEnum::Rifle:
 		RifleFire();
 		break;
 
 	default:
 		break;
-	}*/
+	}
 }
 
 void Afps_cppCharacter::RifleFire()
 {
-
+	if (!bFireCooldownTimer.IsValid())
+	{
+		if (bIsAttacking)
+		{
+			if (Inventory->GetInventory()[bCurrentItemSelection].Bullets >= 1)
+			{
+				
+			}
+		}
+	}
 }
 
 void Afps_cppCharacter::PistolFire()
@@ -248,14 +257,61 @@ void Afps_cppCharacter::StopAiming()
 	bIsAiming = false;
 }
 
+void Afps_cppCharacter::DelayedFunction()
+{
+	bIsAttacking = true;
+	
+}
+
 void Afps_cppCharacter::Reload()
 {
-	bIsAiming = false;
+	if (Inventory->GetInventory()[bCurrentItemSelection].Bullets < bCurrentStats.MagSize)
+	{
+		bIsAiming = false;
+		bIsAttacking = false;
+		StopLeftHandIKServer(true);
+		AWeapon_Base* WB = Cast<AWeapon_Base>(WeaponBase);
+		if (WB)
+		{
+			WB->PlayReloadAnimation(nullptr);
+		}
+		PlayAnimMontageServer(bCurrentReloadAnimation);
+		GetWorld()->GetTimerManager().SetTimer(
+			bFireCooldownTimer,
+			this,
+			&Afps_cppCharacter::DelayedFunction,
+			bCurrentStats.ReloadTime,
+			false
+		);
+
+		if (Inventory && Inventory->GetInventory().IsValidIndex(bCurrentItemSelection))
+		{
+			Inventory->GetInventory()[bCurrentItemSelection].Bullets = bCurrentStats.MagSize;
+			StopLeftHandIKServer(false);
+		}
+	}
 }
 
 void Afps_cppCharacter::DropItem()
 {
-	bIsAiming = false;
+	if (Inventory->GetInventory()[bCurrentItemSelection].ID > 0) 
+	{
+		if (Inventory->GetInventory().IsValidIndex(bCurrentItemSelection)) 
+		{
+			FDynamicInventoryItem Item = Inventory->GetInventory()[bCurrentItemSelection];
+			FVector ForwardCameraLocation = FollowCamera->GetComponentLocation() + (FollowCamera->GetForwardVector() * 200.0);
+
+			FTransform SpawnTransform;
+			SpawnTransform.SetLocation(ForwardCameraLocation);
+			SpawnTransform.SetRotation(FQuat(FRotator(0, 0, 0)));
+			SpawnTransform.SetScale3D(FVector(1, 1, 1));
+			SpawnPickupActorServer(SpawnTransform, ESpawnActorCollisionHandlingMethod::Undefined, Item, bCurrentWeaponPickUpClass);
+
+			Inventory->GetInventory().RemoveAt(bCurrentItemSelection);
+			bCurrentItemSelection = 0;
+			EquiptItem();
+		}
+	}
 }
 
 void Afps_cppCharacter::EquiptItem()
@@ -265,20 +321,36 @@ void Afps_cppCharacter::EquiptItem()
 			int id = Inventory->GetInventory()[PlayerInterface->GetCurrentItemSelection()].ID;
 			FString fname = FString::FromInt(id);
 			DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/ItemDataTable.uasset"));
-			TArray<FName> RowNames = DT_ItemData->GetRowNames();
-			for (int i = 0; i < RowNames.Num(); i++) {
-				UE_LOG(LogTemp, Warning, TEXT("RowName: %s"), *RowNames[i].ToString());
-				if (RowNames[i] == fname) {
-					FItemDataTable data = *(DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString()));
-					SetWeaponClassServer(data.WeaponClass);
-					SetStatsToServer(data.Stats);
-					SetAnimStateServer(data.AnimState);
-					SetCurrentStats(data.Stats);
-					SetCurrentReloadAnimation(data.ReloadAnimation);
-					SetCurrentWeaponClass(data.WeaponClass);
-					SetWeaponType(data.Type);
-					break;
+			if (DT_ItemData) {
+				TArray<FName> RowNames = DT_ItemData->GetRowNames();
+				for (int i = 0; i < RowNames.Num(); i++) {
+					UE_LOG(LogTemp, Warning, TEXT("RowName: %s"), *RowNames[i].ToString());
+					if (RowNames[i] == fname)
+					{
+						FItemDataTable* data = DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString());
+						if (data)
+						{
+							SetWeaponClassServer(data->WeaponClass);
+							SetStatsToServer(data->Stats);
+							SetAnimStateServer(data->AnimState);
+							SetCurrentStats(data->Stats);
+							SetCurrentReloadAnimation(data->ReloadAnimation);
+							SetCurrentWeaponClass(data->WeaponClass);
+							SetWeaponType(data->Type);
+						}
+						else
+						{
+							UE_LOG(LogTemp, Error, TEXT("Failed to find data for item %s"), *fname);
+						}
+						break;
+					}
 				}
+			
+			}
+			else
+			{
+				// 예외 처리: 데이터 테이블을 로드할 수 없는 경우
+				UE_LOG(LogTemp, Error, TEXT("Failed to load item data table"));
 			}
 		}
 	}
@@ -559,6 +631,14 @@ void Afps_cppCharacter::SpawnBulletHole_Implementation(FTransform SpawnTransform
 bool Afps_cppCharacter::SpawnBulletHole_Validate(FTransform SpawnTransform)
 {
 	return true;
+}
+
+void Afps_cppCharacter::ApplyDamageServer_Implementation(AActor* DamageActor, float BaseDamage, AActor* DamageCauser)
+{
+	if (HasAuthority())
+	{
+		UGameplayStatics::ApplyDamage(DamageActor, BaseDamage, nullptr, DamageCauser, nullptr);
+	}
 }
 
 void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -62,11 +62,11 @@ void UPlayerInterfaceImplement::Server_DeleteItem_Implementation(AActor* ItemToD
 void UPlayerInterfaceImplement::IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp)
 {
     if (Player.IsValid() && PlayerInventory.IsValid()) {
-        if (Player.Get()->IsLocallyControlled() && PlayerInventory->Inventory.Num() <= PlayerInventory->MaxItemCount) {
-            PlayerInventory->Inventory.Add(Item);
+        if (Player.Get()->IsLocallyControlled() && PlayerInventory->GetInventory().Num() <= PlayerInventory->MaxItemCount) {
+            PlayerInventory->GetInventory().Add(Item);
             if (pickUp) {
                 Server_DeleteItem(pickUp);
-                CurrentItemSelection = 0;
+                Player->SetCurrentItemSelection(0);
                 Player->EquiptItem();
             }
         }

@@ -15,14 +15,10 @@ class FPS_CPP_API UPlayerInterfaceImplement : public UObject, public IPlayerInte
 {
 	GENERATED_BODY()
 
-	int CurrentItemSelection;
 	TWeakObjectPtr<class Afps_cppCharacter> Player;
 	TWeakObjectPtr<class UInventory> PlayerInventory;
 
 public:
-	int GetCurrentItemSelection() const { return CurrentItemSelection; }
-	void SetCurrentItemSelection(int NewSelection) { CurrentItemSelection = NewSelection; }
-
 	TWeakObjectPtr<class Afps_cppCharacter> GetPlayer() const { return Player; }
 	void SetPlayer(TWeakObjectPtr<class Afps_cppCharacter> NewPlayer) { Player = NewPlayer; }
 
