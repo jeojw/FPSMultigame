@@ -25,6 +25,10 @@ public:
 	// Sets default values for this actor's properties
 	AWeapon_Base();
 
+	USkeletalMeshComponent* GetSkeletalMeshComponent() const { return SkeletalMesh; }
+	USceneComponent* GetAimOffset() const { return AimOffset; }
+	USceneComponent* GetAimOffset_RedDot() const { return AimOffset_RedDot; }
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

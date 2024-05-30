@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "DynamicInventoryItem.h"
 #include "Components/BoxComponent.h"
+#include "PlayerInterface.h"
 #include "PickUpBase.generated.h"
 
 UCLASS()
@@ -20,10 +22,6 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
 	UPROPERTY(EditAnywhere)
 	UBoxComponent* WeaponBox;
 
@@ -33,9 +31,21 @@ public:
 	UPROPERTY(EditAnywhere)
 	USkeletalMeshComponent* GunMesh;
 
-	/*UFUNCTION()
-	void OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
-		bool bFromSweep, const FHitResult& SweepResult);*/
+	UPROPERTY(EditAnywhere, Replicated)
+	FDynamicInventoryItem bItem;
+
+	UPROPERTY(EditAnywhere)
+	TScriptInterface<IPlayerInterface> PlayerInterface;
+
+public:	
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+	
+	void SetItem(FDynamicInventoryItem Item) { bItem = Item; }
+
+	UFUNCTION()
+	void OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor);
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 };

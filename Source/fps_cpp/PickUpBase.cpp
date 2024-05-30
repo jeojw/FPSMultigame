@@ -2,6 +2,7 @@
 
 
 #include "PickUpBase.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 APickUpBase::APickUpBase()
@@ -16,6 +17,8 @@ APickUpBase::APickUpBase()
 
 	GunMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("GunMesh"));
 	GunMesh->SetupAttachment(WeaponBox);
+
+	bReplicates = true;
 }
 
 // Called when the game starts or when spawned
@@ -29,5 +32,19 @@ void APickUpBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void APickUpBase::OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor)
+{
+	if (OtherActor->ActorHasTag(FName("Player")))
+	{
+		PlayerInterface->IF_AddItemToInventory(bItem, this);
+	}
+}
+
+void APickUpBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(APickUpBase, bItem);
 }
 

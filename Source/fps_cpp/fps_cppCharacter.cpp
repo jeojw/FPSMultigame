@@ -10,7 +10,12 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Math/RotationMatrix.h"
+#include "Math/Transform.h"
 #include "Kismet/GameplayStatics.h"
+#include "BulletHole.h"
+#include "Sound/SoundCue.h"
+#include "Particles/ParticleSystem.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -72,7 +77,7 @@ void Afps_cppCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
-
+	/*EquiptItem();*/
 }
 
 void Afps_cppCharacter::Tick(float DeltaTime)
@@ -259,15 +264,19 @@ void Afps_cppCharacter::EquiptItem()
 		if (Inventory->GetInventory().IsValidIndex(PlayerInterface->GetCurrentItemSelection())) {
 			int id = Inventory->GetInventory()[PlayerInterface->GetCurrentItemSelection()].ID;
 			FString fname = FString::FromInt(id);
-			for (int i = 0; i < bItemDataTable.Num(); i++) {
-				if (bItemDataTable[i].RowName == fname) {
-					SetWeaponClassServer(bItemDataTable[i].WeaponClass);
-					SetStatsToServer(bItemDataTable[i].Stats);
-					SetAnimStateServer(bItemDataTable[i].AnimState);
-					SetCurrentStats(bItemDataTable[i].Stats);
-					SetCurrentReloadAnimation(bItemDataTable[i].ReloadAnimation);
-					SetCurrentWeaponClass(bItemDataTable[i].WeaponClass);
-					SetWeaponType(bItemDataTable[i].Type);
+			DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/ItemDataTable.uasset"));
+			TArray<FName> RowNames = DT_ItemData->GetRowNames();
+			for (int i = 0; i < RowNames.Num(); i++) {
+				UE_LOG(LogTemp, Warning, TEXT("RowName: %s"), *RowNames[i].ToString());
+				if (RowNames[i] == fname) {
+					FItemDataTable data = *(DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString()));
+					SetWeaponClassServer(data.WeaponClass);
+					SetStatsToServer(data.Stats);
+					SetAnimStateServer(data.AnimState);
+					SetCurrentStats(data.Stats);
+					SetCurrentReloadAnimation(data.ReloadAnimation);
+					SetCurrentWeaponClass(data.WeaponClass);
+					SetWeaponType(data.Type);
 					break;
 				}
 			}
@@ -275,12 +284,89 @@ void Afps_cppCharacter::EquiptItem()
 	}
 }
 
+void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal)
+{
+	FTransform tmpTransform = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), Loc, FVector(1, 1, 1));
+	if (actor) 
+	{
+		UGameplayStatics::ApplyDamage(actor, bCurrentStats.Damage, nullptr, this, nullptr);
+		SpawnBulletHole(tmpTransform);
+		AActor* HitActor = actor;
+		if (actor->ActorHasTag("Metal"))
+		{
+			static ConstructorHelpers::FObjectFinder<USoundCue> SoundCueFinder(TEXT("/Game/MilitaryWeapSilver/Sound/Rifle/Cues/Rifle_ImpactSurface_Cue"));
+			static ConstructorHelpers::FObjectFinder<UParticleSystem> EmitterTemplateFinder(TEXT("/Game/MilitaryWeapSilver/FX/P_Impact_Metal_Large_01"));
+			if (EmitterTemplateFinder.Succeeded())
+			{
+				UParticleSystem* EmitterTemplate = EmitterTemplateFinder.Object;
+				SpawnEmitterAtLocationServer(EmitterTemplate, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+				if (SoundCueFinder.Succeeded())
+				{
+					USoundCue* SoundCue = SoundCueFinder.Object;
+					PlaySoundAtLocationServer(Loc, SoundCue);
+				}
+			}
+		}
+		else if (actor->ActorHasTag("Flesh"))
+		{
+			static ConstructorHelpers::FObjectFinder<USoundCue> SoundCueFinder(TEXT("/Game/MilitaryWeapSilver/Sound/Rifle/Cues/Rifle_ImpactSurface_Cue"));
+			static ConstructorHelpers::FObjectFinder<UParticleSystem> EmitterTemplateFinder(TEXT("/Game/MilitaryWeapSilver/FX/P_Impact_Metal_Large_01"));
+			if (EmitterTemplateFinder.Succeeded())
+			{
+				UParticleSystem* EmitterTemplate = EmitterTemplateFinder.Object;
+				SpawnEmitterAtLocationServer(EmitterTemplate, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+				if (SoundCueFinder.Succeeded())
+				{
+					USoundCue* SoundCue = SoundCueFinder.Object;
+					PlaySoundAtLocationServer(Loc, SoundCue);
+
+					FVector Start = Loc;
+					FVector End = FollowCamera->GetForwardVector() * 1500.0f + Loc;
+					FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
+					TraceParams.AddIgnoredActor(HitActor);
+					FHitResult HitResult;
+
+					bool bHit = GetWorld()->LineTraceSingleByChannel(
+						HitResult,
+						Start,
+						End,
+						ECC_Visibility,
+						TraceParams
+					);
+
+					if (bHit)
+					{
+						AActor* HitActor2 = HitResult.GetActor();
+						FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), HitActor2->GetActorLocation(), FVector(1, 1, 1));
+						SpawnActorToServer(ABulletHole::StaticClass(), tmpTransform2, ESpawnActorCollisionHandlingMethod::Undefined);
+					}
+				}
+			}
+		}
+		else {
+			static ConstructorHelpers::FObjectFinder<USoundCue> SoundCueFinder(TEXT("/Game/MilitaryWeapSilver/Sound/Rifle/Cues/Rifle_ImpactSurface_Cue"));
+			static ConstructorHelpers::FObjectFinder<UParticleSystem> EmitterTemplateFinder(TEXT("/Game/MilitaryWeapSilver/FX/P_Impact_Metal_Large_01"));
+			if (EmitterTemplateFinder.Succeeded())
+			{
+				UParticleSystem* EmitterTemplate = EmitterTemplateFinder.Object;
+				SpawnEmitterAtLocationServer(EmitterTemplate, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+				if (SoundCueFinder.Succeeded())
+				{
+					USoundCue* SoundCue = SoundCueFinder.Object;
+					PlaySoundAtLocationServer(Loc, SoundCue);
+				}
+			}
+		}
+	}
+	
+}
+
 void Afps_cppCharacter::DeleteItemServer_Implementation(AActor* DeleteItem)
 {
 	if (GetLocalRole() < ROLE_Authority) {
 		APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
 
-		if (UPlayerInterfaceImplement* playerInterface = Cast<UPlayerInterfaceImplement>(PlayerController->GetCharacter())) {
+		if (IPlayerInterface* playerInterface = Cast<IPlayerInterface>(PlayerController->GetCharacter())) {
 			playerInterface->Server_DeleteItem(DeleteItem);
 		}
 	}
@@ -370,7 +456,7 @@ void Afps_cppCharacter::SetWeaponClassServer_Implementation(TSubclassOf<AActor> 
 {
 	if (WBase)
 	{
-		CurrentWeaponClass = WBase;
+		bCurrentWeaponClass = WBase;
 		SetWeaponClassMulticast(WBase);
 	}
 }
@@ -396,10 +482,13 @@ void Afps_cppCharacter::OnRep_AnimState() {
 
 void Afps_cppCharacter::SetAnimStateServer_Implementation(EAnimStateEnum AnimState)
 {
-	if (AnimState != bAnimState)
+	if (HasAuthority())
 	{
-		bAnimState = AnimState;
-		OnRep_AnimState();
+		if (AnimState != bAnimState)
+		{
+			bAnimState = AnimState;
+			OnRep_AnimState();
+		}
 	}
 }
 
@@ -413,12 +502,71 @@ bool Afps_cppCharacter::SetStatsToServer_Validate(FWeaponStatsStruct CurrentStat
 	return true;
 }
 
+void Afps_cppCharacter::PlayAnimMontageMulticast_Implementation(UAnimMontage* AnimMontage)
+{
+	PlayAnimMontage(AnimMontage);
+}
+
+void Afps_cppCharacter::PlayAnimMontageServer_Implementation(UAnimMontage* AnimMontage) 
+{
+	if (HasAuthority())
+	{
+		PlayAnimMontageMulticast_Implementation(AnimMontage);
+	}
+}
+
+bool Afps_cppCharacter::PlayAnimMontageServer_Validate(UAnimMontage* AnimMontage)
+{
+	return true;
+}
+
+void Afps_cppCharacter::SpawnPickupActorServer_Implementation(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class)
+{
+	if (HasAuthority())
+	{
+		if (Class)
+		{
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.SpawnCollisionHandlingOverride = CollisionHandlingOverride;
+			SpawnParams.Instigator = nullptr;
+
+			APickUpBase* PickupActor = GetWorld()->SpawnActor<APickUpBase>(Class, SpawnTransform, SpawnParams);
+			if (PickupActor)
+			{
+				PickupActor->SetItem(Item);
+			}
+		}
+	}
+}
+
+bool Afps_cppCharacter::SpawnPickupActorServer_Validate(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class)
+{
+	return true;
+}
+
+void Afps_cppCharacter::SpawnBulletHole_Implementation(FTransform SpawnTransform)
+{
+	if (HasAuthority())
+	{
+		if (GetWorld())
+		{
+			ABulletHole* NewActor = GetWorld()->SpawnActor<ABulletHole>(ABulletHole::StaticClass(), SpawnTransform);
+		}
+	}
+	
+}
+
+bool Afps_cppCharacter::SpawnBulletHole_Validate(FTransform SpawnTransform)
+{
+	return true;
+}
+
 void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	// CurrentWeaponClass를 네트워크에서 복제되도록 설정
-	DOREPLIFETIME(Afps_cppCharacter, CurrentWeaponClass);
+	DOREPLIFETIME(Afps_cppCharacter, bCurrentWeaponClass);
 
 	DOREPLIFETIME(Afps_cppCharacter, bAnimState);
 }

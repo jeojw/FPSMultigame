@@ -12,6 +12,7 @@
 #include "WeaponStatsStruct.h"
 #include "AnimStateEnum.h"
 #include "Net/UnrealNetwork.h"
+#include "PickUpBase.h"
 #include "fps_cppCharacter.generated.h"
 
 class USpringArmComponent;
@@ -78,20 +79,49 @@ class Afps_cppCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 	UChildActorComponent* WeaponBase;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	bool bIsAiming;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	bool bStopLeftHandIK;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
+	bool bLeanLeft;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
+	bool bLeanRight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	float bAimAlpha;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	float bWallDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = HandSway, meta = (AllowPrivateAccess = "true"))
+	float bSideMove;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = HandSway, meta = (AllowPrivateAccess = "true"))
+	float bMouseX;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = HandSway, meta = (AllowPrivateAccess = "true"))
+	float bMouseY;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	FWeaponStatsStruct bCurrentStats;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* bCurrentReloadAnimation;
 
-	TArray<FItemDataTable> bItemDataTable;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UDataTable* DT_ItemData;
 
-	TWeakObjectPtr<class UPlayerInterfaceImplement> PlayerInterface;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TScriptInterface<IPlayerInterface> PlayerInterface;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	EItemTypeEnum bWeaponType;
 
 	UPROPERTY(BlueprintAssignable)
@@ -99,6 +129,7 @@ class Afps_cppCharacter : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AnimState, Category = Animation, meta = (AllowPrivateAccess = "true"))
 	EAnimStateEnum bAnimState;
+
 
 public:
 	Afps_cppCharacter();
@@ -112,8 +143,34 @@ public:
 	bool GetIsStopLeftHandIK() const { return bStopLeftHandIK; }
 	void SetIsStopLeftHandIK(bool StopLeftHandIK) { bStopLeftHandIK = StopLeftHandIK; }
 
-	TWeakObjectPtr<class UPlayerInterfaceImplement> GetPlayerInterface() const { return PlayerInterface; }
-	void SetPlayerInterface(TWeakObjectPtr<class UPlayerInterfaceImplement> NewPlayerInterface) { PlayerInterface = NewPlayerInterface; }
+	bool GetLeanLeft() const { return bLeanLeft; }
+	bool GetLeanRight() const { return bLeanRight; }
+	void SetLeanLeft(bool LeanLeft) { bLeanLeft = LeanLeft; }
+	void SetLeanRight(bool LeanRight) { bLeanRight = LeanRight; }
+
+	float GetAimAlpha() const { return bAimAlpha; }
+	void SetAimAlpha(float AimAlpha) { bAimAlpha = AimAlpha; }
+
+	float GetWallDistance() const { return bWallDistance; }
+	void SetWallDistance(float WallDistance) { bWallDistance = WallDistance; }
+
+	float GetSideMove() const { return bSideMove; }
+	void SetSideMove(float SideMove) { bSideMove = SideMove; }
+
+	float GetMouseX() const { return bMouseX; }
+	void SetMouseX(float MouseX) { bMouseX = MouseX; }
+
+	float GetMouseY() const { return bMouseY; }
+	void SetMouseY(float MouseY) { bMouseY = MouseY; }
+
+	UChildActorComponent* GetWeaponBase() const { return WeaponBase; }
+	void SetWeaponBase(UChildActorComponent* _WeaponBase) { WeaponBase = _WeaponBase; }
+
+	EAnimStateEnum GetAnimState() const { return bAnimState; }
+	void SetAnimState(EAnimStateEnum AnimState) { bAnimState = AnimState; }
+
+	TScriptInterface<IPlayerInterface> GetPlayerInterface() const { return PlayerInterface; }
+	void SetPlayerInterface(TScriptInterface<IPlayerInterface> NewPlayerInterface) { PlayerInterface = NewPlayerInterface; }
 
 	FWeaponStatsStruct GetCurrentStats() const { return bCurrentStats; }
 	void SetCurrentStats(FWeaponStatsStruct CurrentStats) { bCurrentStats = CurrentStats; }
@@ -130,7 +187,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetWeaponClass(TSubclassOf<AActor> WBase);
 
-protected:
+public:
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 
@@ -160,6 +217,9 @@ protected:
 	UFUNCTION()
 	void EquiptItem();
 
+	UFUNCTION()
+	void ReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
+
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void PlaySoundAtLocationMulticast(FVector Location, USoundBase* Sound);
 
@@ -174,6 +234,12 @@ protected:
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void SpawnActorToServer(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void PlayAnimMontageMulticast(UAnimMontage* AnimMontage);
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void PlayAnimMontageServer(UAnimMontage* AnimMontage);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void SetWeaponClassMulticast(TSubclassOf<AActor> WBase);
@@ -192,6 +258,12 @@ protected:
 
 	UFUNCTION()
 	void OnRep_AnimState();
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void SpawnBulletHole(FTransform SpawnTransform);
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void SpawnPickupActorServer(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void SprintServer(float MaxWalkSpeed);
@@ -232,8 +304,18 @@ protected:
 	void SetStatsToServer_Implementation(FWeaponStatsStruct CurrentStats);
 	bool SetStatsToServer_Validate(FWeaponStatsStruct CurrentStats);
 
+	void SpawnBulletHole_Implementation(FTransform SpawnTransform);
+	bool SpawnBulletHole_Validate(FTransform SpawnTransform);
+
+	void PlayAnimMontageMulticast_Implementation(UAnimMontage* AnimMontage);
+	void PlayAnimMontageServer_Implementation(UAnimMontage* AnimMontage);
+	bool PlayAnimMontageServer_Validate(UAnimMontage* AnimMontage);
+
 	void SetAnimStateServer_Implementation(EAnimStateEnum AnimState);
 	bool SetAnimStateServer_Validate(EAnimStateEnum AnimState);
+
+	void SpawnPickupActorServer_Implementation(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
+	bool SpawnPickupActorServer_Validate(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
 
 	void DeleteItemServer_Implementation(AActor* DeleteItem);
 	bool DeleteItemServer_Validate(AActor* DeleteItem);
