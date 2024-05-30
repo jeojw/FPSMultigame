@@ -5,6 +5,11 @@
 #include "Math/Quat.h"
 #include "Math/Rotator.h"
 
+UPlayerInterfaceImplement::UPlayerInterfaceImplement()
+{
+    CurrentItemSelection = 0; // 기본값 초기화
+}
+
 void UPlayerInterfaceImplement::IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform)
 {
     if (Player->GetWeaponBase()->GetChildActor() && !Player->GetWeaponBase()->GetChildActor()->IsPendingKillEnabled())

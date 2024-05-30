@@ -69,6 +69,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bIsAttacking = false;
 
 	Inventory = CreateDefaultSubobject<UInventory>(TEXT("Inventory"));
+	PlayerInterface = CreateDefaultSubobject<UPlayerInterface>(TEXT("PlayerInterface"));
 
 	bAnimState = EAnimStateEnum::Hands;
 }
@@ -317,41 +318,53 @@ void Afps_cppCharacter::DropItem()
 void Afps_cppCharacter::EquiptItem()
 {
 	if (IsLocallyControlled()) {
-		if (Inventory->GetInventory().IsValidIndex(PlayerInterface->GetCurrentItemSelection())) {
-			int id = Inventory->GetInventory()[PlayerInterface->GetCurrentItemSelection()].ID;
-			FString fname = FString::FromInt(id);
-			DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/ItemDataTable.uasset"));
-			if (DT_ItemData) {
-				TArray<FName> RowNames = DT_ItemData->GetRowNames();
-				for (int i = 0; i < RowNames.Num(); i++) {
-					UE_LOG(LogTemp, Warning, TEXT("RowName: %s"), *RowNames[i].ToString());
-					if (RowNames[i] == fname)
+		if (!Inventory) {
+			UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
+			return;
+		}
+
+		if (!PlayerInterface) {
+			UE_LOG(LogTemp, Error, TEXT("PlayerInterface is nullptr"));
+			return;
+		}
+
+		int CurrentSelection = PlayerInterface->GetCurrentItemSelection();
+		if (!Inventory->GetInventory().IsValidIndex(CurrentSelection)) {
+			UE_LOG(LogTemp, Error, TEXT("Invalid inventory index: %d"), CurrentSelection);
+			return;
+		}
+
+		int id = Inventory->GetInventory()[CurrentSelection].ID;
+		FString fname = FString::FromInt(id);
+		DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/ItemDataTable.uasset"));
+		if (DT_ItemData) {
+			TArray<FName> RowNames = DT_ItemData->GetRowNames();
+			for (int i = 0; i < RowNames.Num(); i++) {
+				UE_LOG(LogTemp, Warning, TEXT("RowName: %s"), *RowNames[i].ToString());
+				if (RowNames[i] == fname)
+				{
+					FItemDataTable* data = DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString());
+					if (data)
 					{
-						FItemDataTable* data = DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString());
-						if (data)
-						{
-							SetWeaponClassServer(data->WeaponClass);
-							SetStatsToServer(data->Stats);
-							SetAnimStateServer(data->AnimState);
-							SetCurrentStats(data->Stats);
-							SetCurrentReloadAnimation(data->ReloadAnimation);
-							SetCurrentWeaponClass(data->WeaponClass);
-							SetWeaponType(data->Type);
-						}
-						else
-						{
-							UE_LOG(LogTemp, Error, TEXT("Failed to find data for item %s"), *fname);
-						}
-						break;
+						SetWeaponClassServer(data->WeaponClass);
+						SetStatsToServer(data->Stats);
+						SetAnimStateServer(data->AnimState);
+						SetCurrentStats(data->Stats);
+						SetCurrentReloadAnimation(data->ReloadAnimation);
+						SetCurrentWeaponClass(data->WeaponClass);
+						SetWeaponType(data->Type);
 					}
+					else
+					{
+						UE_LOG(LogTemp, Error, TEXT("Failed to find data for item %s"), *fname);
+					}
+					break;
 				}
-			
 			}
-			else
-			{
-				// 예외 처리: 데이터 테이블을 로드할 수 없는 경우
-				UE_LOG(LogTemp, Error, TEXT("Failed to load item data table"));
-			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to load item data table"));
 		}
 	}
 }
@@ -641,6 +654,24 @@ void Afps_cppCharacter::ApplyDamageServer_Implementation(AActor* DamageActor, fl
 	}
 }
 
+float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (ActualDamage > 0.0f)
+	{
+		bHealth -= ActualDamage;
+
+		bHealth = FMath::Max(bHealth, 0.0f);
+		if (bHealth <= 0.0f)
+		{
+			Destroy();
+		}
+	}
+
+	return ActualDamage;
+}
+
 void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -649,4 +680,10 @@ void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(Afps_cppCharacter, bCurrentWeaponClass);
 
 	DOREPLIFETIME(Afps_cppCharacter, bAnimState);
+
+	DOREPLIFETIME(Afps_cppCharacter, bLeanLeft);
+
+	DOREPLIFETIME(Afps_cppCharacter, bLeanRight);
+
+	DOREPLIFETIME(Afps_cppCharacter, bHealth);
 }
