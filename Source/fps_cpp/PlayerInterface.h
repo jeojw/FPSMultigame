@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
 #include "DynamicInventoryItem.h"
+#include "AnimStateEnum.h"
 #include "PlayerInterface.generated.h"
 
 // This class does not need to be modified.
@@ -21,20 +22,8 @@ class FPS_CPP_API IPlayerInterface
 {
 	GENERATED_BODY()
 
-	int CurrentItemSelection;
-    TWeakObjectPtr<class Afps_cppCharacter> Player;
-    TWeakObjectPtr<class UInventory> PlayerInventory;
-
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-	int GetCurrentItemSelection() const { return CurrentItemSelection; }
-	void SetCurrentItemSelection(int NewSelection) { CurrentItemSelection = NewSelection; }
-
-	TWeakObjectPtr<class Afps_cppCharacter> GetPlayer() const { return Player; }
-	void SetPlayer(TWeakObjectPtr<class Afps_cppCharacter> NewPlayer) { Player = NewPlayer; }
-
-	TWeakObjectPtr<class UInventory> GetInventory() const { return PlayerInventory; }
-	void SetInventory(TWeakObjectPtr<class UInventory> NewInventory) { PlayerInventory = NewInventory; }
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void IF_GetLeftHandSocketTransform(FTransform& OutTransform);
@@ -56,9 +45,7 @@ public:
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	virtual void Server_DeleteItem(AActor* ItemToDelete);
-
 	virtual bool Server_DeleteItem_Validate(AActor* ItemToDelete) = 0;
-
 	virtual void Server_DeleteItem_Implementation(AActor* ItemToDelete) = 0;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)

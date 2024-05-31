@@ -4,6 +4,8 @@
 #include "Math/Vector.h"
 #include "Math/Quat.h"
 #include "Math/Rotator.h"
+#include "Animation/AnimInstance.h"
+#include "fps_cppCharacter.h"
 
 UPlayerInterfaceImplement::UPlayerInterfaceImplement()
 {
@@ -12,43 +14,67 @@ UPlayerInterfaceImplement::UPlayerInterfaceImplement()
 
 void UPlayerInterfaceImplement::IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform)
 {
-    if (Player->GetWeaponBase()->GetChildActor() && !Player->GetWeaponBase()->GetChildActor()->IsPendingKillEnabled())
+    if (Player)
     {
-        USkeletalMeshComponent* WeaponMesh = Cast<USkeletalMeshComponent>(Player->GetWeaponBase());
-        FTransform WeaponSocketTransform = WeaponMesh->GetSocketTransform(FName("LHIK"));
-        FVector OutPosition;
-        FRotator OutRotation;
-        WeaponMesh->TransformToBoneSpace(FName("hand_r"), WeaponSocketTransform.GetLocation(), FRotator(WeaponSocketTransform.GetRotation()), OutPosition, OutRotation);
+        AActor* ChildActor = Player->GetWeaponBase()->GetChildActor();
+        if (ChildActor && !ChildActor->IsPendingKillEnabled())
+        {
+            AWeapon_Base* WeaponBase = Cast<AWeapon_Base>(ChildActor);
+            if (WeaponBase)
+            {
+                USkeletalMeshComponent* WeaponMesh = WeaponBase->GetSkeletalMeshComponent();
+                if (WeaponMesh)
+                {
+                    FTransform WeaponSocketTransform = WeaponMesh->GetSocketTransform(FName("LHIK"), RTS_World);
+                    FVector OutPosition;
+                    FRotator OutRotation;
+                    WeaponMesh->TransformToBoneSpace(FName("hand_r"), WeaponSocketTransform.GetLocation(), FRotator(WeaponSocketTransform.GetRotation()), OutPosition, OutRotation);
 
-        FTransform ReturnTransform;
-        ReturnTransform.SetLocation(OutPosition);
-        ReturnTransform.SetRotation(FQuat(OutRotation));
-        ReturnTransform.SetScale3D(FVector(1, 1, 1));
+                    FTransform ReturnTransform;
+                    ReturnTransform.SetLocation(OutPosition);
+                    ReturnTransform.SetRotation(FQuat(OutRotation));
+                    ReturnTransform.SetScale3D(FVector(1, 1, 1));
 
-        OutTransform = ReturnTransform;
+                    OutTransform = ReturnTransform;
+                }
+            }
+        }
     }
 }
 
 void UPlayerInterfaceImplement::IF_GetHandSwayFloats_Implementation(float& SideMove, float& MouseX, float& MouseY)
 {
-    SideMove = Player->GetSideMove();
-    MouseX = Player->GetMouseX();
-    MouseY = Player->GetMouseY();
+    if (Player)
+    {
+        SideMove = Player->GetSideMove();
+        MouseX = Player->GetMouseX();
+        MouseY = Player->GetMouseY();
+    }
 }
 
 void UPlayerInterfaceImplement::IF_GetIsAim_Implementation(bool& Aim)
 {
-    Aim = Player->GetIsAiming();
+    if (Player)
+    {
+        Aim = Player->GetIsAiming();
+    }
 }
 
 void UPlayerInterfaceImplement::IF_GetStopLeftHandIK_Implementation(bool& StopIK)
 {
-    StopIK = Player->GetIsStopLeftHandIK();
+    if (Player)
+    {
+        StopIK = Player->GetIsStopLeftHandIK();
+    }
+    
 }
 
 void UPlayerInterfaceImplement::IF_GetWallDistance_Implementation(float& Value)
 {
-    Value = Player->GetWallDistance();
+    if (Player)
+    {
+        Value = Player->GetWallDistance();
+    }
 }
 
 bool UPlayerInterfaceImplement::Server_DeleteItem_Validate(AActor* ItemToDelete)
@@ -66,8 +92,9 @@ void UPlayerInterfaceImplement::Server_DeleteItem_Implementation(AActor* ItemToD
 
 void UPlayerInterfaceImplement::IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp)
 {
-    if (Player.IsValid() && PlayerInventory.IsValid()) {
-        if (Player.Get()->IsLocallyControlled() && PlayerInventory->GetInventory().Num() <= PlayerInventory->MaxItemCount) {
+    if (Player && PlayerInventory)
+    {
+        if (Player->IsLocallyControlled() && PlayerInventory->GetInventory().Num() <= PlayerInventory->MaxItemCount) {
             PlayerInventory->GetInventory().Add(Item);
             if (pickUp) {
                 Server_DeleteItem(pickUp);
@@ -76,27 +103,40 @@ void UPlayerInterfaceImplement::IF_AddItemToInventory_Implementation(const FDyna
             }
         }
     }
-
 }
 
 void UPlayerInterfaceImplement::IF_GetAnimState_Implementation(EAnimStateEnum& AnimState)
 {
-    AnimState = Player->GetAnimState();
+    if (Player)
+    {
+        AnimState = Player->GetAnimState();
+    }
+    
 }
 
 void UPlayerInterfaceImplement::IF_GetAimAlpha_Implementation(float& A)
 {
-    A = Player->GetAimAlpha();
+    if (Player)
+    {
+        A = Player->GetAimAlpha();
+    }
+   
 }
 
 void UPlayerInterfaceImplement::IF_GetLeanBooleans_Implementation(bool& Left, bool& Right)
 {
-    Left = Player->GetLeanLeft();
-    Right = Player->GetLeanRight();
+    if (Player)
+    {
+        Left = Player->GetLeanLeft();
+        Right = Player->GetLeanRight();
+    }
 }
 
 void UPlayerInterfaceImplement::IF_ReceiveProjectileImpact_Implementation(AActor* HitActor, UActorComponent* HitComponent, const FVector HitLocation, const FVector NormalPoint)
 {
-    Player->ReceiveImpactProjectile(HitActor, HitComponent, HitLocation, NormalPoint);
+    if (Player)
+    {
+        Player->ReceiveImpactProjectile(HitActor, HitComponent, HitLocation, NormalPoint);
+    }
 }
 

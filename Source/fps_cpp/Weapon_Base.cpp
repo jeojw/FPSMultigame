@@ -12,6 +12,16 @@ AWeapon_Base::AWeapon_Base()
 	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
 	SkeletalMesh->SetupAttachment(RootComponent);
 
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshAsset(TEXT("/Game/FPS_Weapon_Bundle/Weapons/Meshes/AR4/SK_AR4"));
+	if (SkeletalMeshAsset.Succeeded())
+	{
+		SkeletalMesh->SetSkeletalMesh(SkeletalMeshAsset.Object);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to load SkeletalMesh asset!"));
+	}
+
 	AimOffset = CreateDefaultSubobject<USceneComponent>(TEXT("AimOffset"));
 	AimOffset->SetupAttachment(SkeletalMesh);
 

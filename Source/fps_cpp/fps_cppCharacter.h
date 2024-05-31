@@ -10,8 +10,10 @@
 #include "ItemDataTable.h"
 #include "Net/UnrealNetwork.h"
 #include "PickUpBase.h"
+#include "ProjectileBullet.h"
 #include "fps_cppCharacter.generated.h"
 
+class UPlayerInterfaceImplement;
 class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
@@ -127,7 +129,7 @@ class Afps_cppCharacter : public ACharacter
 	UDataTable* DT_ItemData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	TScriptInterface<IPlayerInterface> PlayerInterface;
+	UPlayerInterfaceImplement* PlayerInterface;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	EItemTypeEnum bWeaponType;
@@ -177,8 +179,8 @@ public:
 	EAnimStateEnum GetAnimState() const { return bAnimState; }
 	void SetAnimState(EAnimStateEnum AnimState) { bAnimState = AnimState; }
 
-	TScriptInterface<IPlayerInterface> GetPlayerInterface() const { return PlayerInterface; }
-	void SetPlayerInterface(TScriptInterface<IPlayerInterface> NewPlayerInterface) { PlayerInterface = NewPlayerInterface; }
+	UPlayerInterfaceImplement* GetPlayerInterface() const { return PlayerInterface; }
+	void SetPlayerInterface(UPlayerInterfaceImplement* NewPlayerInterface) { PlayerInterface = NewPlayerInterface; }
 
 	FWeaponStatsStruct GetCurrentStats() const { return bCurrentStats; }
 	void SetCurrentStats(FWeaponStatsStruct CurrentStats) { bCurrentStats = CurrentStats; }
@@ -199,6 +201,7 @@ public:
 	void SetWeaponClass(TSubclassOf<AActor> WBase);
 
 	void DelayedFunction();
+
 
 public:
 	/** Called for movement input */
@@ -232,6 +235,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
+
+	UFUNCTION(BlueprintCallable)
+	void FireProjectileToDirection();
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void PlaySoundAtLocationMulticast(FVector Location, USoundBase* Sound);

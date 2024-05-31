@@ -7,29 +7,34 @@
 #include "Inventory.h"
 #include "ItemDataTable.h"
 #include "AnimStateEnum.h"
-#include "fps_cppCharacter.h"
 #include "Components/SkinnedMeshComponent.h"
+#include "PlayerAnimInstance.h"
 #include "PlayerInterfaceImplement.generated.h"
 /**
  * 
  */
+class Afps_cppCharacter;
+
 UCLASS()
 class FPS_CPP_API UPlayerInterfaceImplement : public UObject, public IPlayerInterface
 {
 	GENERATED_BODY()
 
 	int CurrentItemSelection;
-	TWeakObjectPtr<class Afps_cppCharacter> Player;
-	TWeakObjectPtr<class UInventory> PlayerInventory;
+	Afps_cppCharacter* Player;
+	UInventory* PlayerInventory;
 
 public:
 	UPlayerInterfaceImplement();
 
-	TWeakObjectPtr<class Afps_cppCharacter> GetPlayer() const { return Player; }
-	void SetPlayer(TWeakObjectPtr<class Afps_cppCharacter> NewPlayer) { Player = NewPlayer; }
+	int GetCurrentItemSelection() const { return CurrentItemSelection; }
+	void SetCurrentItemSelection(int NewSelection) { CurrentItemSelection = NewSelection; }
 
-	TWeakObjectPtr<class UInventory> GetInventory() const { return PlayerInventory; }
-	void SetInventory(TWeakObjectPtr<class UInventory> NewInventory) { PlayerInventory = NewInventory; }
+	Afps_cppCharacter* GetPlayer() const { return Player; }
+	void SetPlayer(Afps_cppCharacter* NewPlayer) { Player = NewPlayer; }
+
+	UInventory* GetInventory() const { return PlayerInventory; }
+	void SetInventory(UInventory* NewInventory) { PlayerInventory = NewInventory; }
 
 	virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform) override;
 
@@ -41,8 +46,9 @@ public:
 
 	virtual void IF_GetWallDistance_Implementation(float& Value) override;
 
-	virtual bool Server_DeleteItem_Validate(AActor* ItemToDelete);
+	virtual bool Server_DeleteItem_Validate(AActor* ItemToDelete) override;
 	virtual void Server_DeleteItem_Implementation(AActor* ItemToDelete) override;
+
 	virtual void IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp) override;
 
 	virtual void IF_GetAnimState_Implementation(EAnimStateEnum& AnimState) override;

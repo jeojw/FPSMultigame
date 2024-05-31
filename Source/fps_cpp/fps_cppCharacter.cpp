@@ -60,6 +60,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	WeaponBase = CreateDefaultSubobject<UChildActorComponent>(TEXT("WeaponBase"));
 	WeaponBase->SetupAttachment(GetMesh(), FName(TEXT("WeaponSocket")));
+	WeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -71,8 +72,11 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bIsAttacking = false;
 
 	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
-	UPlayerInterfaceImplement* PlayerInterfaceImpl = CreateDefaultSubobject<UPlayerInterfaceImplement>(TEXT("PlayerInterfaceImpl"));
-	PlayerInterface = PlayerInterfaceImpl;
+	PlayerInterface = CreateDefaultSubobject<UPlayerInterfaceImplement>(TEXT("PlayerInterface"));
+	if (PlayerInterface)
+	{
+		PlayerInterface->SetPlayer(this);
+	}
 
 	bAnimState = EAnimStateEnum::Hands;
 }
@@ -377,6 +381,83 @@ void Afps_cppCharacter::EquiptItem()
 		{
 			UE_LOG(LogTemp, Error, TEXT("Failed to load item data table"));
 		}
+	}
+}
+
+void Afps_cppCharacter::FireProjectileToDirection()
+{
+	FVector MuzzlePointLocalLocation;
+	FTransform MuzzlePoint = WeaponBase->GetSocketTransform(FName("MuzzlePoint"));
+	MuzzlePointLocalLocation = MuzzlePoint.GetLocation();
+
+	FVector Start = FollowCamera->GetComponentLocation();
+	FVector End = Start + FollowCamera->GetForwardVector() * bCurrentStats.Range;
+	FHitResult HitResult;
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		Start,
+		End,
+		ECC_Visibility
+	);
+
+	if (bHit) 
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
+		SpawnParams.Instigator = nullptr;
+
+		FTransform SpawnTransform;
+
+		FRotator Selected;
+		FRotator RotatorA = FRotationMatrix::MakeFromX(HitResult.ImpactPoint - MuzzlePointLocalLocation).Rotator();
+		FRotator RotatorB = FRotationMatrix::MakeFromX(HitResult.ImpactPoint - MuzzlePointLocalLocation).Rotator();
+		RotatorB.Roll += FMath::RandRange(-1.0f, 1.0f);
+		RotatorB.Pitch += FMath::RandRange(-1.0f, 1.0f);
+		RotatorB.Yaw += FMath::RandRange(-1.0f, 1.0f);
+
+		if (bIsAiming)
+		{
+			Selected = RotatorA;
+		}
+		else
+		{
+			Selected = RotatorB;
+		}
+
+		SpawnTransform = FTransform(Selected, MuzzlePointLocalLocation, FVector(1, 1, 1));
+
+		AProjectileBullet* SpawnedBulletActor = GetWorld()->SpawnActor<AProjectileBullet>(AProjectileBullet::StaticClass(), SpawnTransform, SpawnParams);
+		SpawnedBulletActor->GetProjectileMovment()->Velocity *= 1;
+	}
+	else
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
+		SpawnParams.Instigator = nullptr;
+
+		FTransform SpawnTransform;
+
+		FTransform tmpTransform = FTransform(FollowCamera->GetComponentRotation(), MuzzlePointLocalLocation, FVector(1, 1, 1));
+		FRotator RotatorA = FRotator(tmpTransform.GetRotation());
+		FRotator RotatorB = FRotator(tmpTransform.GetRotation());
+		FRotator Selected;
+		RotatorB.Roll += FMath::RandRange(-1.0f, 1.0f);
+		RotatorB.Pitch += FMath::RandRange(-1.0f, 1.0f);
+		RotatorB.Yaw += FMath::RandRange(-1.0f, 1.0f);
+		
+		if (bIsAiming)
+		{
+			Selected = RotatorA;
+		}
+		else
+		{
+			Selected = RotatorB;
+		}
+
+		SpawnTransform = FTransform(Selected, tmpTransform.GetLocation(), tmpTransform.GetScale3D());
+		AProjectileBullet* SpawnedBulletActor = GetWorld()->SpawnActor<AProjectileBullet>(AProjectileBullet::StaticClass(), SpawnTransform, SpawnParams);
+		SpawnedBulletActor->GetProjectileMovment()->Velocity *= 1;
 	}
 }
 
