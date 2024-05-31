@@ -22,26 +22,26 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UBoxComponent* WeaponBox;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UBoxComponent* PickUpBox;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	USkeletalMeshComponent* GunMesh;
 
-	UPROPERTY(EditAnywhere, Replicated)
-	FDynamicInventoryItem bItem;
+	UPROPERTY(VisibleAnywhere, Replicated, BlueprintReadWrite)
+	FDynamicInventoryItem Item;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	TScriptInterface<IPlayerInterface> PlayerInterface;
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	
-	void SetItem(FDynamicInventoryItem Item) { bItem = Item; }
+	void SetItem(FDynamicInventoryItem _Item) { Item = _Item; }
 
 	UFUNCTION()
 	void OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor);

@@ -3,8 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/CompositeDataTable.h"
-#include "ItemStruct.h"
+#include "Engine/DataTable.h"
+#include "ItemTypeEnum.h"
+#include "Weapon_Base.h"
+#include "PickUpBase.h"
+#include "WeaponStatsStruct.h"
 #include "AnimStateEnum.h"
 #include "ItemDataTable.generated.h"
 
@@ -18,9 +21,6 @@ struct FItemDataTable : public FTableRowBase
 
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FName RowName;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FName Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -30,13 +30,16 @@ public:
     EItemTypeEnum Type;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TSubclassOf<AActor> WeaponClass;
+    TSubclassOf<AWeapon_Base> WeaponClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FWeaponStatsStruct Stats;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     UAnimMontage* ReloadAnimation;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TSubclassOf<APickUpBase> PickupClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     EAnimStateEnum AnimState;

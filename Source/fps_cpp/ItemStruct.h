@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "ItemTypeEnum.h"
 #include "Weapon_Base.h"
+#include "PickUpBase.h"
 #include "WeaponStatsStruct.h"
 #include "AnimStateEnum.h"
 #include "ItemStruct.generated.h"
@@ -24,13 +25,16 @@ public:
 	EItemTypeEnum Type;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<AActor> WeaponClass;
+	TSubclassOf<AWeapon_Base> WeaponClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FWeaponStatsStruct Stats;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UAnimMontage* ReloadAnimation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<APickUpBase> PickupClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EAnimStateEnum AnimState;

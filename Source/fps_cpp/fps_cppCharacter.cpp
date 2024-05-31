@@ -2,6 +2,7 @@
 
 #include "fps_cppCharacter.h"
 #include "Engine/LocalPlayer.h"
+#include "Engine/DataTable.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -15,6 +16,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "BulletHole.h"
 #include "Sound/SoundCue.h"
+#include "PlayerInterfaceImplement.h"
 #include "Particles/ParticleSystem.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -68,8 +70,9 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bStopLeftHandIK = false;
 	bIsAttacking = false;
 
-	Inventory = CreateDefaultSubobject<UInventory>(TEXT("Inventory"));
-	PlayerInterface = CreateDefaultSubobject<UPlayerInterface>(TEXT("PlayerInterface"));
+	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
+	UPlayerInterfaceImplement* PlayerInterfaceImpl = CreateDefaultSubobject<UPlayerInterfaceImplement>(TEXT("PlayerInterfaceImpl"));
+	PlayerInterface = PlayerInterfaceImpl;
 
 	bAnimState = EAnimStateEnum::Hands;
 }
@@ -229,7 +232,7 @@ void Afps_cppCharacter::RifleFire()
 	{
 		if (bIsAttacking)
 		{
-			if (Inventory->GetInventory()[bCurrentItemSelection].Bullets >= 1)
+			if (InventoryComponent->GetInventory()[bCurrentItemSelection].Bullets >= 1)
 			{
 				
 			}
@@ -266,7 +269,11 @@ void Afps_cppCharacter::DelayedFunction()
 
 void Afps_cppCharacter::Reload()
 {
-	if (Inventory->GetInventory()[bCurrentItemSelection].Bullets < bCurrentStats.MagSize)
+	if (!InventoryComponent) {
+		UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
+		return;
+	}
+	if (InventoryComponent->GetInventory()[bCurrentItemSelection].Bullets < bCurrentStats.MagSize)
 	{
 		bIsAiming = false;
 		bIsAttacking = false;
@@ -285,9 +292,9 @@ void Afps_cppCharacter::Reload()
 			false
 		);
 
-		if (Inventory && Inventory->GetInventory().IsValidIndex(bCurrentItemSelection))
+		if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
 		{
-			Inventory->GetInventory()[bCurrentItemSelection].Bullets = bCurrentStats.MagSize;
+			InventoryComponent->GetInventory()[bCurrentItemSelection].Bullets = bCurrentStats.MagSize;
 			StopLeftHandIKServer(false);
 		}
 	}
@@ -295,11 +302,15 @@ void Afps_cppCharacter::Reload()
 
 void Afps_cppCharacter::DropItem()
 {
-	if (Inventory->GetInventory()[bCurrentItemSelection].ID > 0) 
+	if (!InventoryComponent) {
+		UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
+		return;
+	}
+	if (InventoryComponent->GetInventory()[bCurrentItemSelection].ID > 0)
 	{
-		if (Inventory->GetInventory().IsValidIndex(bCurrentItemSelection)) 
+		if (InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
 		{
-			FDynamicInventoryItem Item = Inventory->GetInventory()[bCurrentItemSelection];
+			FDynamicInventoryItem Item = InventoryComponent->GetInventory()[bCurrentItemSelection];
 			FVector ForwardCameraLocation = FollowCamera->GetComponentLocation() + (FollowCamera->GetForwardVector() * 200.0);
 
 			FTransform SpawnTransform;
@@ -308,7 +319,7 @@ void Afps_cppCharacter::DropItem()
 			SpawnTransform.SetScale3D(FVector(1, 1, 1));
 			SpawnPickupActorServer(SpawnTransform, ESpawnActorCollisionHandlingMethod::Undefined, Item, bCurrentWeaponPickUpClass);
 
-			Inventory->GetInventory().RemoveAt(bCurrentItemSelection);
+			InventoryComponent->GetInventory().RemoveAt(bCurrentItemSelection);
 			bCurrentItemSelection = 0;
 			EquiptItem();
 		}
@@ -318,7 +329,7 @@ void Afps_cppCharacter::DropItem()
 void Afps_cppCharacter::EquiptItem()
 {
 	if (IsLocallyControlled()) {
-		if (!Inventory) {
+		if (!InventoryComponent) {
 			UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
 			return;
 		}
@@ -329,14 +340,14 @@ void Afps_cppCharacter::EquiptItem()
 		}
 
 		int CurrentSelection = PlayerInterface->GetCurrentItemSelection();
-		if (!Inventory->GetInventory().IsValidIndex(CurrentSelection)) {
+		if (!InventoryComponent->GetInventory().IsValidIndex(CurrentSelection)) {
 			UE_LOG(LogTemp, Error, TEXT("Invalid inventory index: %d"), CurrentSelection);
 			return;
 		}
 
-		int id = Inventory->GetInventory()[CurrentSelection].ID;
+		int id = InventoryComponent->GetInventory()[CurrentSelection].ID;
 		FString fname = FString::FromInt(id);
-		DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/ItemDataTable.uasset"));
+		DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/DT_ItemData"));
 		if (DT_ItemData) {
 			TArray<FName> RowNames = DT_ItemData->GetRowNames();
 			for (int i = 0; i < RowNames.Num(); i++) {
@@ -567,14 +578,8 @@ void Afps_cppCharacter::OnRep_AnimState() {
 
 void Afps_cppCharacter::SetAnimStateServer_Implementation(EAnimStateEnum AnimState)
 {
-	if (HasAuthority())
-	{
-		if (AnimState != bAnimState)
-		{
-			bAnimState = AnimState;
-			OnRep_AnimState();
-		}
-	}
+	bAnimState = AnimState;
+	OnRep_AnimState();
 }
 
 bool Afps_cppCharacter::SetAnimStateServer_Validate(EAnimStateEnum AnimState)

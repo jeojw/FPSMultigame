@@ -38,13 +38,13 @@ void APickUpBase::OnBoxOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
 {
 	if (OtherActor->ActorHasTag(FName("Player")))
 	{
-		PlayerInterface->IF_AddItemToInventory(bItem, this);
+		PlayerInterface->IF_AddItemToInventory(Item, this);
 	}
 }
 
 void APickUpBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(APickUpBase, bItem);
+	DOREPLIFETIME(APickUpBase, Item);
 }
 

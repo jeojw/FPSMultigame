@@ -4,6 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "PlayerInterface.h"
+#include "Inventory.h"
+#include "ItemDataTable.h"
+#include "AnimStateEnum.h"
 #include "fps_cppCharacter.h"
 #include "Components/SkinnedMeshComponent.h"
 #include "PlayerInterfaceImplement.generated.h"

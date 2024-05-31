@@ -8,9 +8,6 @@
 #include "PlayerInterface.h"
 #include "Inventory.h"
 #include "ItemDataTable.h"
-#include "Weapon_Base.h"
-#include "WeaponStatsStruct.h"
-#include "AnimStateEnum.h"
 #include "Net/UnrealNetwork.h"
 #include "PickUpBase.h"
 #include "fps_cppCharacter.generated.h"
@@ -19,7 +16,6 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
-class UPlayerInterface;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -40,7 +36,7 @@ class Afps_cppCharacter : public ACharacter
 	UCameraComponent* FollowCamera;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UInventory* Inventory;
+	UInventory* InventoryComponent;
 	
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))

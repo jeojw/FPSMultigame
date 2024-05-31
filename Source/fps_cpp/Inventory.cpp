@@ -12,6 +12,7 @@ UInventory::UInventory()
 
 	Inventory.Add(FDynamicInventoryItem(1, 30, 0));
 	Inventory.Add(FDynamicInventoryItem(2, 25, 0));
+	Inventory.Add(FDynamicInventoryItem(3, 10, 0));
 
 	MaxItemCount = 5;
 	// ...

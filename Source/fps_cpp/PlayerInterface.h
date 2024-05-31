@@ -5,8 +5,6 @@
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
 #include "DynamicInventoryItem.h"
-#include "Inventory.h"
-#include "AnimStateEnum.h"
 #include "PlayerInterface.generated.h"
 
 // This class does not need to be modified.
