@@ -5,14 +5,18 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/BoxComponent.h"
+#include "PlayerInterface.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Engine/EngineTypes.h"
 #include "ProjectileBullet.generated.h"
 
 UCLASS()
 class FPS_CPP_API AProjectileBullet : public AActor
 {
 	GENERATED_BODY()
+
+	bool bHasExecuted;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
@@ -23,19 +27,16 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	UProjectileMovementComponent* ProjectileMovement;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	AActor* Player;
 	
 public:	
 	// Sets default values for this actor's properties
 	AProjectileBullet();
 
-	//UFUNCTION()
-	//void OverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+	void BoxComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
-	//UFUNCTION()
-	//void HitMesh(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+	/*UFUNCTION()
+	void BoxComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);*/
 
 protected:
 	// Called when the game starts or when spawned

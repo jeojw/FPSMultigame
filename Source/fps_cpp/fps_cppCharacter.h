@@ -11,7 +11,9 @@
 #include "Net/UnrealNetwork.h"
 #include "PickUpBase.h"
 #include "ProjectileBullet.h"
+#include "Components/TimelineComponent.h"
 #include "fps_cppCharacter.generated.h"
+
 
 class UPlayerInterfaceImplement;
 class USpringArmComponent;
@@ -25,7 +27,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAnimStateChangedEvent);
 
 UCLASS(config = Game)
-class Afps_cppCharacter : public ACharacter
+class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 {
 	GENERATED_BODY()
 
@@ -77,13 +79,13 @@ class Afps_cppCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 	UChildActorComponent* WeaponBase;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bIsAiming;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bStopLeftHandIK;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
@@ -119,7 +121,7 @@ class Afps_cppCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<APickUpBase> bCurrentWeaponPickUpClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	FWeaponStatsStruct bCurrentStats;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
@@ -129,7 +131,7 @@ class Afps_cppCharacter : public ACharacter
 	UDataTable* DT_ItemData;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UPlayerInterfaceImplement* PlayerInterface;
+	TScriptInterface<IPlayerInterface> PlayerInterface;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	EItemTypeEnum bWeaponType;
@@ -137,8 +139,26 @@ class Afps_cppCharacter : public ACharacter
 	UPROPERTY(BlueprintAssignable)
 	FAnimStateChangedEvent OnAnimStateChanged;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AnimState, Category = Animation, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AnimState, meta = (AllowPrivateAccess = "true"))
 	EAnimStateEnum bAnimState;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	FTransform bLeftHandSocketTransform;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	FTimerHandle TimerHandle_CheckWallTick;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UTimelineComponent* RecoilTimeline;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UCurveFloat* RecoilCurve;
+
+	float RecoilAmount;
+	void ApplyRecoil(float PitchValue, float YawValue);
+	void UpdateRecoilValues();
+
+	void CheckWallTick();
 
 
 public:
@@ -179,8 +199,8 @@ public:
 	EAnimStateEnum GetAnimState() const { return bAnimState; }
 	void SetAnimState(EAnimStateEnum AnimState) { bAnimState = AnimState; }
 
-	UPlayerInterfaceImplement* GetPlayerInterface() const { return PlayerInterface; }
-	void SetPlayerInterface(UPlayerInterfaceImplement* NewPlayerInterface) { PlayerInterface = NewPlayerInterface; }
+	TScriptInterface<IPlayerInterface> GetPlayerInterface() const { return PlayerInterface; }
+	void SetPlayerInterface(TScriptInterface<IPlayerInterface> NewPlayerInterface) { PlayerInterface = NewPlayerInterface; }
 
 	FWeaponStatsStruct GetCurrentStats() const { return bCurrentStats; }
 	void SetCurrentStats(FWeaponStatsStruct CurrentStats) { bCurrentStats = CurrentStats; }
@@ -197,8 +217,16 @@ public:
 	int GetCurrentItemSelection() const { return bCurrentItemSelection; }
 	void SetCurrentItemSelection(int CurItem) { bCurrentItemSelection = CurItem; }
 
+	FTransform GetLeftHandSocketTransform() const { return bLeftHandSocketTransform; }
+	void SetLeftHandSocketTransoform(FTransform LeftHandSocketTransform) { bLeftHandSocketTransform = LeftHandSocketTransform; }
+
 	UFUNCTION(BlueprintCallable)
 	void SetWeaponClass(TSubclassOf<AActor> WBase);
+
+	UFUNCTION()
+	void RecoilProgress(float Value);
+
+	void ControllerRecoil(float RecoilAmount);
 
 	void DelayedFunction();
 
@@ -293,14 +321,31 @@ public:
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void ApplyDamageServer(AActor* DamageActor, float BaseDamage, AActor* DamageCauser);
 
+	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	void WallDistanceServer(float WallDistance);
+
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform) override;
+	virtual void IF_GetHandSwayFloats_Implementation(float& SideMove, float& MouseX, float& MouseY) override;
+	virtual void IF_GetIsAim_Implementation(bool& Aim) override;
+	virtual void IF_GetStopLeftHandIK_Implementation(bool& StopIK) override;
+	virtual void IF_GetWallDistance_Implementation(float& Value) override;
+	virtual void IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp) override;
+	virtual void Server_DeleteItem_Implementation(AActor* ItemToDelete) override;
+	virtual bool Server_DeleteItem_Validate(AActor* ItemToDelete) override;
+	virtual void IF_GetAnimState_Implementation(EAnimStateEnum& AnimState) override;
+	virtual void IF_GetAimAlpha_Implementation(float& A) override;
+	virtual void IF_GetLeanBooleans_Implementation(bool& Left, bool& Right) override;
+	virtual void IF_ReceiveProjectileImpact_Implementation(AActor* HitActor, UActorComponent* HitComponent, const FVector HitLocation, const FVector NormalPoint) override;
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 	// To add mapping context
 	virtual void BeginPlay() override;
+
+	virtual void PostInitializeComponents() override;
 
 	virtual void Tick(float DeltaTime) override;
 
@@ -346,6 +391,10 @@ protected:
 
 	void ApplyDamageServer_Implementation(AActor* DamageActor, float BaseDamage, AActor* DamageCauser);
 
+	void WallDistanceServer_Implementation(float WallDistance);
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	
 };
 

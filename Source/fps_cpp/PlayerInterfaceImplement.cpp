@@ -34,8 +34,6 @@ void UPlayerInterfaceImplement::IF_GetLeftHandSocketTransform_Implementation(FTr
                     ReturnTransform.SetLocation(OutPosition);
                     ReturnTransform.SetRotation(FQuat(OutRotation));
                     ReturnTransform.SetScale3D(FVector(1, 1, 1));
-
-                    OutTransform = ReturnTransform;
                 }
             }
         }

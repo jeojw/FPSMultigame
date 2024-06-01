@@ -24,7 +24,6 @@ class FPS_CPP_API IPlayerInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void IF_GetLeftHandSocketTransform(FTransform& OutTransform);
 

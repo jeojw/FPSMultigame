@@ -18,6 +18,7 @@
 #include "Sound/SoundCue.h"
 #include "PlayerInterfaceImplement.h"
 #include "Particles/ParticleSystem.h"
+#include <Kismet/KismetMathLibrary.h>
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -72,29 +73,85 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bIsAttacking = false;
 
 	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
-	PlayerInterface = CreateDefaultSubobject<UPlayerInterfaceImplement>(TEXT("PlayerInterface"));
-	if (PlayerInterface)
-	{
-		PlayerInterface->SetPlayer(this);
-	}
 
 	bAnimState = EAnimStateEnum::Hands;
+
+	RecoilTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilTimeline"));
+
+	static ConstructorHelpers::FObjectFinder<UCurveFloat> Curve(TEXT("/Game/Characters/Mannequins/Animations/RecoilTrack"));
+	if (Curve.Succeeded()) 
+	{
+		RecoilCurve = Curve.Object;
+	}
+}
+
+void Afps_cppCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	// Initialize the PlayerInterface
+	PlayerInterface.SetInterface(Cast<IPlayerInterface>(this));
+	PlayerInterface.SetObject(this);
+
+	if (!PlayerInterface.GetObject() || !PlayerInterface.GetInterface())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to initialize PlayerInterface"));
+	}
 }
 
 void Afps_cppCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+
+	if (RecoilCurve && RecoilTimeline)
+	{
+		FOnTimelineFloat RecoilProgressFunction;
+		RecoilProgressFunction.BindUFunction(this, FName("RecoilProgress"));
+		RecoilTimeline->AddInterpFloat(RecoilCurve, RecoilProgressFunction);
+	}
+
+	CheckWallTick();
+	
 	EquiptItem();
 }
 
 void Afps_cppCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	GetWorldTimerManager().SetTimer(TimerHandle_CheckWallTick, this, &Afps_cppCharacter::CheckWallTick, 0.02f, true);
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Input
+
+void Afps_cppCharacter::CheckWallTick()
+{
+	FVector Start = FollowCamera->GetComponentLocation();
+	FVector End = Start + FollowCamera->GetForwardVector() * 200.0f;
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
+	TraceParams.AddIgnoredActor(this);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		Start,
+		End,
+		ECC_Visibility,
+		TraceParams
+	);
+
+	if (bHit)
+	{
+		float WallDistance = FVector::Distance(HitResult.Location, FollowCamera->GetComponentLocation()) / 200.0f;
+		WallDistanceServer(WallDistance);
+	}
+	else
+	{
+		WallDistanceServer(1.0f);
+	}
+}
 
 void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -208,6 +265,55 @@ void Afps_cppCharacter::StopSprint()
 		{
 			GetCharacterMovement()->MaxWalkSpeed = 100.0f;
 		}
+	}
+}
+
+void Afps_cppCharacter::RecoilProgress(float Value)
+{
+	// 곡선의 현재 값을 사용하여 반동을 적용하는 로직
+	float PitchValue = UKismetMathLibrary::Lerp(-1.0f, 1.0f, Value) * RecoilAmount;
+	float YawValue = UKismetMathLibrary::Lerp(-1.0f, 1.0f, Value) * RecoilAmount;
+
+	ApplyRecoil(PitchValue, YawValue);
+}
+
+void Afps_cppCharacter::ApplyRecoil(float PitchValue, float YawValue)
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		FRotator NewControlRotation = PlayerController->GetControlRotation();
+		NewControlRotation.Pitch += PitchValue;
+		NewControlRotation.Yaw += YawValue;
+		PlayerController->SetControlRotation(NewControlRotation);
+	}
+}
+
+void Afps_cppCharacter::UpdateRecoilValues()
+{
+	int32 RandomValue = FMath::RandRange(0, 10);
+
+	float PitchRecoil = bIsAiming ? 0.5f : 1.0f;
+	float YawRecoil = bIsAiming ? 0.25f : 1.0f;
+
+	if (RandomValue > 5)
+	{
+		ApplyRecoil(PitchRecoil, YawRecoil);
+	}
+	else
+	{
+		ApplyRecoil(-PitchRecoil, -YawRecoil);
+	}
+}
+
+void Afps_cppCharacter::ControllerRecoil(float _RecoilAmount)
+{
+	RecoilAmount = _RecoilAmount; // 전달된 반동 값을 멤버 변수로 저장
+
+	if (RecoilTimeline && RecoilCurve)
+	{
+		UpdateRecoilValues();
+		RecoilTimeline->PlayFromStart();
 	}
 }
 
@@ -339,11 +445,11 @@ void Afps_cppCharacter::EquiptItem()
 		}
 
 		if (!PlayerInterface) {
-			UE_LOG(LogTemp, Error, TEXT("PlayerInterface is nullptr"));
+			UE_LOG(LogTemp, Error, TEXT("PlayerInterface is null"));
 			return;
 		}
 
-		int CurrentSelection = PlayerInterface->GetCurrentItemSelection();
+		int CurrentSelection = bCurrentItemSelection;
 		if (!InventoryComponent->GetInventory().IsValidIndex(CurrentSelection)) {
 			UE_LOG(LogTemp, Error, TEXT("Invalid inventory index: %d"), CurrentSelection);
 			return;
@@ -428,7 +534,7 @@ void Afps_cppCharacter::FireProjectileToDirection()
 		SpawnTransform = FTransform(Selected, MuzzlePointLocalLocation, FVector(1, 1, 1));
 
 		AProjectileBullet* SpawnedBulletActor = GetWorld()->SpawnActor<AProjectileBullet>(AProjectileBullet::StaticClass(), SpawnTransform, SpawnParams);
-		SpawnedBulletActor->GetProjectileMovment()->Velocity *= 1;
+		SpawnedBulletActor->GetProjectileMovment()->Velocity *= 1.0f;
 	}
 	else
 	{
@@ -457,7 +563,7 @@ void Afps_cppCharacter::FireProjectileToDirection()
 
 		SpawnTransform = FTransform(Selected, tmpTransform.GetLocation(), tmpTransform.GetScale3D());
 		AProjectileBullet* SpawnedBulletActor = GetWorld()->SpawnActor<AProjectileBullet>(AProjectileBullet::StaticClass(), SpawnTransform, SpawnParams);
-		SpawnedBulletActor->GetProjectileMovment()->Velocity *= 1;
+		SpawnedBulletActor->GetProjectileMovment()->Velocity *= 10000.0f;;
 	}
 }
 
@@ -740,6 +846,11 @@ void Afps_cppCharacter::ApplyDamageServer_Implementation(AActor* DamageActor, fl
 	}
 }
 
+void Afps_cppCharacter::WallDistanceServer_Implementation(float WallDistance)
+{
+	bWallDistance = WallDistance;
+}
+
 float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
@@ -773,3 +884,96 @@ void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 	DOREPLIFETIME(Afps_cppCharacter, bHealth);
 }
+
+void Afps_cppCharacter::IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform)
+{
+	AActor* ChildActor = WeaponBase->GetChildActor();
+	if (ChildActor && !ChildActor->IsPendingKillEnabled())
+	{
+		AWeapon_Base* Weapon_Base = Cast<AWeapon_Base>(ChildActor);
+		if (Weapon_Base)
+		{
+			USkeletalMeshComponent* WeaponMesh = Weapon_Base->GetSkeletalMeshComponent();
+			if (WeaponMesh)
+			{
+				FTransform WeaponSocketTransform = WeaponMesh->GetSocketTransform(FName("LHIK"), RTS_World);
+				FVector OutPosition;
+				FRotator OutRotation;
+				WeaponMesh->TransformToBoneSpace(FName("hand_r"), WeaponSocketTransform.GetLocation(), FRotator(WeaponSocketTransform.GetRotation()), OutPosition, OutRotation);
+
+				OutTransform.SetLocation(OutPosition);
+				OutTransform.SetRotation(FQuat(OutRotation));
+				OutTransform.SetScale3D(FVector(1, 1, 1));
+			}
+		}
+	}
+}
+
+void Afps_cppCharacter::IF_GetHandSwayFloats_Implementation(float& SideMove, float& MouseX, float& MouseY)
+{
+	SideMove = bSideMove;
+	MouseX = bMouseX;
+	MouseY = bMouseY;
+}
+
+void Afps_cppCharacter::IF_GetIsAim_Implementation(bool& Aim)
+{
+	Aim = bIsAiming;
+}
+
+void Afps_cppCharacter::IF_GetStopLeftHandIK_Implementation(bool& StopIK)
+{
+	StopIK = bStopLeftHandIK;
+
+}
+
+void Afps_cppCharacter::IF_GetWallDistance_Implementation(float& Value)
+{
+	Value = bWallDistance;
+}
+bool Afps_cppCharacter::Server_DeleteItem_Validate(AActor* ItemToDelete)
+{
+	return true;
+}
+
+void Afps_cppCharacter::Server_DeleteItem_Implementation(AActor* ItemToDelete)
+{
+	if (ItemToDelete)
+	{
+		ItemToDelete->Destroy();
+	}
+}
+
+void Afps_cppCharacter::IF_AddItemToInventory_Implementation(const FDynamicInventoryItem Item, AActor* pickUp)
+{
+	if (IsLocallyControlled() && InventoryComponent->GetInventory().Num() <= InventoryComponent->GetMaxItemCount()) {
+		InventoryComponent->GetInventory().Add(Item);
+		if (pickUp) {
+			Server_DeleteItem(pickUp);
+			bCurrentItemSelection = 0;
+			EquiptItem();
+		}
+	}
+}
+
+void Afps_cppCharacter::IF_GetAnimState_Implementation(EAnimStateEnum& AnimState)
+{
+	AnimState = bAnimState;
+}
+
+void Afps_cppCharacter::IF_GetAimAlpha_Implementation(float& A)
+{
+	A = bAimAlpha;
+}
+
+void Afps_cppCharacter::IF_GetLeanBooleans_Implementation(bool& Left, bool& Right)
+{
+	Left = bLeanLeft;
+	Right = bLeanRight;
+}
+
+void Afps_cppCharacter::IF_ReceiveProjectileImpact_Implementation(AActor* HitActor, UActorComponent* HitComponent, const FVector HitLocation, const FVector NormalPoint)
+{
+	ReceiveImpactProjectile(HitActor, HitComponent, HitLocation, NormalPoint);
+}
+

@@ -10,6 +10,18 @@ ABulletHole::ABulletHole()
 	PrimaryActorTick.bCanEverTick = true;
 
 	BulletHole = CreateDefaultSubobject<UDecalComponent>(TEXT("Decal"));
+	BulletHole->SetupAttachment(RootComponent);
+
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> DecalMaterial(TEXT("/Game/Megascans/Decals/Concrete_Patch_Oil_sdpqjfi/M_DynamicDecal.uasset"));
+    if (DecalMaterial.Succeeded())
+    {
+        BulletHoleMaterial = DecalMaterial.Object;
+        BulletHole->SetDecalMaterial(BulletHoleMaterial);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to load bullet hole material"));
+    }
 }
 
 // Called when the game starts or when spawned

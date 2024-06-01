@@ -11,8 +11,12 @@ UCLASS()
 class FPS_CPP_API ABulletHole : public AActor
 {
 	GENERATED_BODY()
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UDecalComponent* BulletHole;
+
+	UPROPERTY(EditAnywhere, Category = "Decal")
+	UMaterialInterface* BulletHoleMaterial;
 	
 public:	
 	// Sets default values for this actor's properties
