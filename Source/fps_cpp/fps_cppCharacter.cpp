@@ -76,12 +76,37 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	bAnimState = EAnimStateEnum::Hands;
 
-	RecoilTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilTimeline"));
+	bRecoilTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilTimeline"));
 
 	static ConstructorHelpers::FObjectFinder<UCurveFloat> Curve(TEXT("/Game/Characters/Mannequins/Animations/RecoilTrack"));
 	if (Curve.Succeeded()) 
 	{
-		RecoilCurve = Curve.Object;
+		bRecoilCurve = Curve.Object;
+	}
+
+	static ConstructorHelpers::FClassFinder<UAnimInstance> BlueprintAnim(TEXT("/Game/Characters/Mannequins/Animations/ABP_Manny"));
+	if (BlueprintAnim.Succeeded())
+	{
+		bAnimationBlueprintRef = BlueprintAnim.Class;
+		GetMesh()->SetAnimInstanceClass(bAnimationBlueprintRef);
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundCue> SoundCueFinder(TEXT("/Game/MilitaryWeapDark/Sound/Rifle/RifleB_FireEnd_Cue.RifleB_FireEnd_Cue"));
+	if (SoundCueFinder.Succeeded())
+	{
+		RifleImpactSoundCue = SoundCueFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UParticleSystem> EmitterTemplateFinder(TEXT("/Game/MilitaryWeapDark/FX/P_AssaultRifle_MuzzleFlash"));
+	if (EmitterTemplateFinder.Succeeded())
+	{
+		MuzzleFlashParticleSystem = EmitterTemplateFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UParticleSystem> MetalImpactFinder(TEXT("/Game/MilitaryWeapSilver/FX/P_Impact_Metal_Large_01"));
+	if (MetalImpactFinder.Succeeded())
+	{
+		MetalImpactParticleSystem = MetalImpactFinder.Object;
 	}
 }
 
@@ -104,11 +129,16 @@ void Afps_cppCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
-	if (RecoilCurve && RecoilTimeline)
+	if (bRecoilCurve && bRecoilTimeline)
 	{
 		FOnTimelineFloat RecoilProgressFunction;
-		RecoilProgressFunction.BindUFunction(this, FName("RecoilProgress"));
-		RecoilTimeline->AddInterpFloat(RecoilCurve, RecoilProgressFunction);
+		RecoilProgressFunction.BindUFunction(this, FName("ControllerRecoil"));
+		bRecoilTimeline->AddInterpFloat(bRecoilCurve, RecoilProgressFunction);
+	}
+
+	if (bAnimationBlueprintRef)
+	{
+		GetMesh()->SetAnimInstanceClass(bAnimationBlueprintRef);
 	}
 
 	CheckWallTick();
@@ -120,7 +150,9 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	GetWorldTimerManager().SetTimer(TimerHandle_CheckWallTick, this, &Afps_cppCharacter::CheckWallTick, 0.02f, true);
+	GetWorldTimerManager().SetTimer(bTimerHandle_CheckWallTick, this, &Afps_cppCharacter::CheckWallTick, 0.02f, true);
+
+	bRecoilTimeline->TickComponent(DeltaTime, ELevelTick::LEVELTICK_TimeOnly, nullptr);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -268,52 +300,62 @@ void Afps_cppCharacter::StopSprint()
 	}
 }
 
-void Afps_cppCharacter::RecoilProgress(float Value)
+void Afps_cppCharacter::ApplyRecoil(float PitchValue, float YawValue)
 {
-	// 곡선의 현재 값을 사용하여 반동을 적용하는 로직
-	float PitchValue = UKismetMathLibrary::Lerp(-1.0f, 1.0f, Value) * RecoilAmount;
-	float YawValue = UKismetMathLibrary::Lerp(-1.0f, 1.0f, Value) * RecoilAmount;
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	float SelectFloat_1 = bIsAiming ? -0.25f : -1.0f;
+	float SelectFloat_2 = bIsAiming ? 1.0f : 2.5f;
+	if (PlayerController)
+	{
+		PlayerController->AddPitchInput(SelectFloat_1 * PitchValue);
+		if (FMath::RandRange(int32(1), int32(10)) < 5)
+		{
+			PlayerController->AddYawInput((YawValue / SelectFloat_2) * -1);
+		}
+		else
+		{
+			PlayerController->AddYawInput(YawValue / SelectFloat_2);
+		}
+	}
+}
+
+void Afps_cppCharacter::ControllerRecoil(float Value)
+{
+	float CurveValue = bRecoilCurve->GetFloatValue(Value);
+	float PitchValue = FMath::Lerp(0.0f, bCurrentStats.InputRecoil, CurveValue);
+	float YawValue = FMath::Lerp(0.0f, bCurrentStats.InputRecoil, CurveValue);
 
 	ApplyRecoil(PitchValue, YawValue);
 }
 
-void Afps_cppCharacter::ApplyRecoil(float PitchValue, float YawValue)
+void Afps_cppCharacter::ResetFireRifle()
 {
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	if (PlayerController)
-	{
-		FRotator NewControlRotation = PlayerController->GetControlRotation();
-		NewControlRotation.Pitch += PitchValue;
-		NewControlRotation.Yaw += YawValue;
-		PlayerController->SetControlRotation(NewControlRotation);
-	}
+	bFireCooldownTimer.Invalidate();
 }
 
-void Afps_cppCharacter::UpdateRecoilValues()
+void Afps_cppCharacter::EjectShell(FVector Location, FRotator Rotation)
 {
-	int32 RandomValue = FMath::RandRange(0, 10);
-
-	float PitchRecoil = bIsAiming ? 0.5f : 1.0f;
-	float YawRecoil = bIsAiming ? 0.25f : 1.0f;
-
-	if (RandomValue > 5)
+	if (Location != FVector(0, 0, 0))
 	{
-		ApplyRecoil(PitchRecoil, YawRecoil);
-	}
-	else
-	{
-		ApplyRecoil(-PitchRecoil, -YawRecoil);
-	}
-}
+		FTransform SpawnTransform;
+		SpawnTransform.SetLocation(Location);
+		SpawnTransform.SetRotation(FQuat(Rotation));
+		SpawnTransform.SetScale3D(FVector(1, 1, 1));
 
-void Afps_cppCharacter::ControllerRecoil(float _RecoilAmount)
-{
-	RecoilAmount = _RecoilAmount; // 전달된 반동 값을 멤버 변수로 저장
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		SpawnParams.Instigator = nullptr;
 
-	if (RecoilTimeline && RecoilCurve)
-	{
-		UpdateRecoilValues();
-		RecoilTimeline->PlayFromStart();
+		AShell_Base* ShellActor = GetWorld()->SpawnActor<AShell_Base>(AShell_Base::StaticClass(), SpawnTransform, SpawnParams);
+		if (ShellActor)
+		{
+			ShellActor->GetShell()->SetSimulatePhysics(true);
+			FVector RightRandom = ShellActor->GetShell()->GetRightVector() * FMath::RandRange(int32(-2), int32(2));
+			FVector ForwardRandom = ShellActor->GetShell()->GetForwardVector() * FMath::RandRange(int32(1), int32(10));
+			ShellActor->GetShell()->AddImpulse(RightRandom + ForwardRandom);
+
+			GetWorldTimerManager().SetTimer(bShellEjectTimer, nullptr, 0.5f, false);
+		}
 	}
 }
 
@@ -338,13 +380,45 @@ void Afps_cppCharacter::Fire()
 
 void Afps_cppCharacter::RifleFire()
 {
-	if (!bFireCooldownTimer.IsValid())
+	if (!GetWorld()->GetTimerManager().IsTimerActive(bFireCooldownTimer))
 	{
 		if (bIsAttacking)
 		{
-			if (InventoryComponent->GetInventory()[bCurrentItemSelection].Bullets >= 1)
+			if (InventoryComponent->GetCurBullet(bCurrentItemSelection) >= 1)
 			{
-				
+				GetWorld()->GetTimerManager().SetTimer(
+					bFireCooldownTimer,
+					this,
+					&Afps_cppCharacter::ResetFireRifle,
+					bCurrentStats.FireRate,
+					false
+				);
+				InventoryComponent->ReduceBullet(bCurrentItemSelection);
+
+				AWeapon_Base* Weapon = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
+				if (Weapon)
+				{
+					FTransform ShellTransform;
+					IGunInterface::Execute_GetShellTransform(Weapon, ShellTransform);
+					EjectShell(ShellTransform.GetLocation(), FRotator(ShellTransform.GetRotation()));
+					FireProjectileToDirection();
+					
+					if (GetMesh()->GetAnimInstance())
+					{
+						UFunction* F_Procedural_Recoil = GetMesh()->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
+						if (F_Procedural_Recoil)
+						{
+							GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
+							PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+							bRecoilTimeline->PlayFromStart();
+
+							FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
+							SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+							GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
+						}
+					}
+
+				}
 			}
 		}
 	}
@@ -352,7 +426,48 @@ void Afps_cppCharacter::RifleFire()
 
 void Afps_cppCharacter::PistolFire()
 {
+	if (!GetWorld()->GetTimerManager().IsTimerActive(bFireCooldownTimer))
+	{
+		if (bIsAttacking)
+		{
+			if (InventoryComponent->GetCurBullet(bCurrentItemSelection) >= 1)
+			{
+				GetWorld()->GetTimerManager().SetTimer(
+					bFireCooldownTimer,
+					this,
+					&Afps_cppCharacter::ResetFireRifle,
+					bCurrentStats.FireRate,
+					false
+				);
+				InventoryComponent->ReduceBullet(bCurrentItemSelection);
 
+				AWeapon_Base* Weapon = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
+				if (Weapon)
+				{
+					FTransform ShellTransform;
+					IGunInterface::Execute_GetShellTransform(Weapon, ShellTransform);
+					EjectShell(ShellTransform.GetLocation(), FRotator(ShellTransform.GetRotation()));
+					FireProjectileToDirection();
+
+					if (GetMesh()->GetAnimInstance())
+					{
+						UFunction* F_Procedural_Recoil = GetMesh()->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
+						if (F_Procedural_Recoil)
+						{
+							GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
+							PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+							bRecoilTimeline->PlayFromStart();
+
+							FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
+							SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+							GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
+						}
+					}
+
+				}
+			}
+		}
+	}
 }
 
 
@@ -371,10 +486,18 @@ void Afps_cppCharacter::StopAiming()
 	bIsAiming = false;
 }
 
-void Afps_cppCharacter::DelayedFunction()
+void Afps_cppCharacter::FireDelayCompleted()
 {
-	bIsAttacking = true;
+	if (bIsAttacking && InventoryComponent->GetInventory()[bCurrentItemSelection].Bullets >= 1)
+	{
+		RifleFire();
+	}
 	
+}
+
+void Afps_cppCharacter::ReloadDelayCompleted()
+{
+	bIsAiming = true;
 }
 
 void Afps_cppCharacter::Reload()
@@ -397,16 +520,16 @@ void Afps_cppCharacter::Reload()
 		GetWorld()->GetTimerManager().SetTimer(
 			bFireCooldownTimer,
 			this,
-			&Afps_cppCharacter::DelayedFunction,
+			&Afps_cppCharacter::ReloadDelayCompleted,
 			bCurrentStats.ReloadTime,
 			false
 		);
 
 		if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
 		{
-			InventoryComponent->GetInventory()[bCurrentItemSelection].Bullets = bCurrentStats.MagSize;
+			InventoryComponent->ReloadBullet(bCurrentItemSelection, bCurrentStats);
 			StopLeftHandIKServer(false);
-		}
+		}	
 	}
 }
 
@@ -577,68 +700,38 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 		AActor* HitActor = actor;
 		if (actor->ActorHasTag("Metal"))
 		{
-			static ConstructorHelpers::FObjectFinder<USoundCue> SoundCueFinder(TEXT("/Game/MilitaryWeapSilver/Sound/Rifle/Cues/Rifle_ImpactSurface_Cue"));
-			static ConstructorHelpers::FObjectFinder<UParticleSystem> EmitterTemplateFinder(TEXT("/Game/MilitaryWeapSilver/FX/P_Impact_Metal_Large_01"));
-			if (EmitterTemplateFinder.Succeeded())
-			{
-				UParticleSystem* EmitterTemplate = EmitterTemplateFinder.Object;
-				SpawnEmitterAtLocationServer(EmitterTemplate, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-				if (SoundCueFinder.Succeeded())
-				{
-					USoundCue* SoundCue = SoundCueFinder.Object;
-					PlaySoundAtLocationServer(Loc, SoundCue);
-				}
-			}
+			SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			PlaySoundAtLocationServer(Loc, RifleImpactSoundCue);
 		}
 		else if (actor->ActorHasTag("Flesh"))
 		{
-			static ConstructorHelpers::FObjectFinder<USoundCue> SoundCueFinder(TEXT("/Game/MilitaryWeapSilver/Sound/Rifle/Cues/Rifle_ImpactSurface_Cue"));
-			static ConstructorHelpers::FObjectFinder<UParticleSystem> EmitterTemplateFinder(TEXT("/Game/MilitaryWeapSilver/FX/P_Impact_Metal_Large_01"));
-			if (EmitterTemplateFinder.Succeeded())
+			SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			PlaySoundAtLocationServer(Loc, RifleImpactSoundCue);
+
+			FVector Start = Loc;
+			FVector End = FollowCamera->GetForwardVector() * 1500.0f + Loc;
+			FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
+			TraceParams.AddIgnoredActor(HitActor);
+			FHitResult HitResult;
+
+			bool bHit = GetWorld()->LineTraceSingleByChannel(
+				HitResult,
+				Start,
+				End,
+				ECC_Visibility,
+				TraceParams
+			);
+
+			if (bHit)
 			{
-				UParticleSystem* EmitterTemplate = EmitterTemplateFinder.Object;
-				SpawnEmitterAtLocationServer(EmitterTemplate, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-				if (SoundCueFinder.Succeeded())
-				{
-					USoundCue* SoundCue = SoundCueFinder.Object;
-					PlaySoundAtLocationServer(Loc, SoundCue);
-
-					FVector Start = Loc;
-					FVector End = FollowCamera->GetForwardVector() * 1500.0f + Loc;
-					FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
-					TraceParams.AddIgnoredActor(HitActor);
-					FHitResult HitResult;
-
-					bool bHit = GetWorld()->LineTraceSingleByChannel(
-						HitResult,
-						Start,
-						End,
-						ECC_Visibility,
-						TraceParams
-					);
-
-					if (bHit)
-					{
-						AActor* HitActor2 = HitResult.GetActor();
-						FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), HitActor2->GetActorLocation(), FVector(1, 1, 1));
-						SpawnActorToServer(ABulletHole::StaticClass(), tmpTransform2, ESpawnActorCollisionHandlingMethod::Undefined);
-					}
-				}
+				AActor* HitActor2 = HitResult.GetActor();
+				FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), HitActor2->GetActorLocation(), FVector(1, 1, 1));
+				SpawnActorToServer(ABulletHole::StaticClass(), tmpTransform2, ESpawnActorCollisionHandlingMethod::Undefined);
 			}
 		}
 		else {
-			static ConstructorHelpers::FObjectFinder<USoundCue> SoundCueFinder(TEXT("/Game/MilitaryWeapSilver/Sound/Rifle/Cues/Rifle_ImpactSurface_Cue"));
-			static ConstructorHelpers::FObjectFinder<UParticleSystem> EmitterTemplateFinder(TEXT("/Game/MilitaryWeapSilver/FX/P_Impact_Metal_Large_01"));
-			if (EmitterTemplateFinder.Succeeded())
-			{
-				UParticleSystem* EmitterTemplate = EmitterTemplateFinder.Object;
-				SpawnEmitterAtLocationServer(EmitterTemplate, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-				if (SoundCueFinder.Succeeded())
-				{
-					USoundCue* SoundCue = SoundCueFinder.Object;
-					PlaySoundAtLocationServer(Loc, SoundCue);
-				}
-			}
+			SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			PlaySoundAtLocationServer(Loc, RifleImpactSoundCue);
 		}
 	}
 	

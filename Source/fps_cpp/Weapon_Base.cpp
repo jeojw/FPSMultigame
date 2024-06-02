@@ -49,4 +49,10 @@ void AWeapon_Base::PlayReloadAnimation(UAnimSequence* ReloadAnimation)
 		SkeletalMesh->PlayAnimation(ReloadAnimation, false); // false means not looping
 	}
 }
+void AWeapon_Base::GetShellTransform_Implementation(FTransform& T)
+{
+	FTransform SocketTransform = SkeletalMesh->GetSocketTransform(FName("ShellSocket"));
+	T = SocketTransform;
+}
+
 

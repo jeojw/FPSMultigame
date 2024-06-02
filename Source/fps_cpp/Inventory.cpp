@@ -37,3 +37,17 @@ void UInventory::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompo
 	// ...
 }
 
+int UInventory::GetCurBullet(int current) const
+{
+	return Inventory[current].Bullets;
+}
+
+void UInventory::ReduceBullet(int current)
+{
+	Inventory[current].Bullets -= 1;
+}
+void UInventory::ReloadBullet(int current, FWeaponStatsStruct curStats)
+{
+	Inventory[current].Bullets = curStats.MagSize;
+}
+

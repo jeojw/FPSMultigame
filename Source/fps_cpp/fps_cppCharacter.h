@@ -10,6 +10,7 @@
 #include "ItemDataTable.h"
 #include "Net/UnrealNetwork.h"
 #include "PickUpBase.h"
+#include "Shell_Base.h"
 #include "ProjectileBullet.h"
 #include "Components/TimelineComponent.h"
 #include "fps_cppCharacter.generated.h"
@@ -146,21 +147,33 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	FTransform bLeftHandSocketTransform;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	FTimerHandle TimerHandle_CheckWallTick;
+	FTimerHandle bTimerHandle_CheckWallTick;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UTimelineComponent* RecoilTimeline;
+	FTimerHandle bFireRateTimer;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UCurveFloat* RecoilCurve;
+	FTimerHandle bShellEjectTimer;
 
-	float RecoilAmount;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UTimelineComponent* bRecoilTimeline;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UCurveFloat* bRecoilCurve;
+
+	USoundCue* RifleImpactSoundCue;
+	UParticleSystem* MuzzleFlashParticleSystem;
+	UParticleSystem* MetalImpactParticleSystem;
+
 	void ApplyRecoil(float PitchValue, float YawValue);
-	void UpdateRecoilValues();
+
+	void FireDelayCompleted();
+	void ReloadDelayCompleted();
 
 	void CheckWallTick();
 
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UAnimInstance> bAnimationBlueprintRef;
 public:
 	Afps_cppCharacter();
 
@@ -223,12 +236,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetWeaponClass(TSubclassOf<AActor> WBase);
 
-	UFUNCTION()
-	void RecoilProgress(float Value);
-
 	void ControllerRecoil(float RecoilAmount);
 
-	void DelayedFunction();
+	UFUNCTION()
+	void ResetFireRifle();
+
+	UFUNCTION(BlueprintCallable)
+	void EjectShell(FVector Location, FRotator Rotation);
 
 
 public:

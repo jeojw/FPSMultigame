@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "GunInterface.h"
 #include "Weapon_Base.generated.h"
 
 UCLASS()
-class FPS_CPP_API AWeapon_Base : public AActor
+class FPS_CPP_API AWeapon_Base : public AActor, public IGunInterface
 {
 	GENERATED_BODY()
 
@@ -20,6 +21,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	USceneComponent* AimOffset_RedDot;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FTransform bSocketTransform;
 	
 public:	
 	// Sets default values for this actor's properties
@@ -38,6 +42,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	USkeletalMeshComponent* GetMesh() const { return SkeletalMesh; }
 	void SetMesh(USkeletalMeshComponent* _mesh) { SkeletalMesh = _mesh; }
+
+	virtual void GetShellTransform_Implementation(FTransform& T) override;
 
 	UFUNCTION(BlueprintCallable)
 	void PlayReloadAnimation(UAnimSequence* ReloadAnimation);

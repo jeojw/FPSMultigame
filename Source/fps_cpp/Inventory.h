@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "ItemDataTable.h"
 #include "DynamicInventoryItem.h"
 #include "Inventory.generated.h"
 
@@ -33,6 +34,10 @@ public:
 
 	void SetInventory(TArray<FDynamicInventoryItem> _Inventory) { Inventory = _Inventory; }
 	TArray<FDynamicInventoryItem> GetInventory() const { return Inventory; }
+
+	int GetCurBullet(int current) const;
+	void ReduceBullet(int current);
+	void ReloadBullet(int current, FWeaponStatsStruct curStats);
 
 	void SetMaxItemCount(int _max) { MaxItemCount = _max; }
 	int GetMaxItemCount() const { return MaxItemCount; }
