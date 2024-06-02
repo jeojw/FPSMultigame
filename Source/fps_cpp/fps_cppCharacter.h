@@ -163,8 +163,11 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UCurveFloat* bRecoilCurve;
 
 	USoundCue* RifleImpactSoundCue;
+	USoundCue* RiflelSurfacempactSoundCue;
 	UParticleSystem* MuzzleFlashParticleSystem;
 	UParticleSystem* MetalImpactParticleSystem;
+
+	FTimerHandle CheckWallTimerHandle;
 
 	void ApplyRecoil(float PitchValue, float YawValue);
 
@@ -282,13 +285,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void FireProjectileToDirection();
 
-	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	UFUNCTION(NetMulticast, Unreliable, BlueprintCallable)
 	void PlaySoundAtLocationMulticast(FVector Location, USoundBase* Sound);
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void PlaySoundAtLocationServer(FVector Location, USoundBase* Sound);
 
-	UFUNCTION(Server, Unreliable, BlueprintCallable)
+	UFUNCTION(NetMulticast, Unreliable, BlueprintCallable)
 	void SpawnEmitterAtLocationMulticast(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
@@ -297,13 +300,13 @@ public:
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void SpawnActorToServer(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
 
-	UFUNCTION(Server, Reliable, BlueprintCallable)
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
 	void PlayAnimMontageMulticast(UAnimMontage* AnimMontage);
 
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void PlayAnimMontageServer(UAnimMontage* AnimMontage);
 
-	UFUNCTION(Server, Reliable, BlueprintCallable)
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
 	void SetWeaponClassMulticast(TSubclassOf<AActor> WBase);
 
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)

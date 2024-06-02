@@ -97,6 +97,12 @@ Afps_cppCharacter::Afps_cppCharacter()
 		RifleImpactSoundCue = SoundCueFinder.Object;
 	}
 
+	static ConstructorHelpers::FObjectFinder<USoundCue> SurfaceSoundFinder(TEXT("/Game/MilitaryWeapDark/Sound/Rifle/Rifle_ImpactSurface_Cue.Rifle_ImpactSurface_Cue"));
+	if (SurfaceSoundFinder.Succeeded())
+	{
+		RiflelSurfacempactSoundCue = SurfaceSoundFinder.Object;
+	}
+
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> EmitterTemplateFinder(TEXT("/Game/MilitaryWeapDark/FX/P_AssaultRifle_MuzzleFlash"));
 	if (EmitterTemplateFinder.Succeeded())
 	{
@@ -141,8 +147,10 @@ void Afps_cppCharacter::BeginPlay()
 		GetMesh()->SetAnimInstanceClass(bAnimationBlueprintRef);
 	}
 
-	CheckWallTick();
-	
+	if (FollowCamera)
+	{
+		GetWorldTimerManager().SetTimer(CheckWallTimerHandle, this, &Afps_cppCharacter::CheckWallTick, 0.1f, true);
+	}
 	EquipItem();
 }
 
@@ -160,6 +168,11 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 
 void Afps_cppCharacter::CheckWallTick()
 {
+	if (!FollowCamera)
+	{
+		return;
+	}
+
 	FVector Start = FollowCamera->GetComponentLocation();
 	FVector End = Start + FollowCamera->GetForwardVector() * 200.0f;
 	FHitResult HitResult;
@@ -177,11 +190,17 @@ void Afps_cppCharacter::CheckWallTick()
 	if (bHit)
 	{
 		float WallDistance = FVector::Distance(HitResult.Location, FollowCamera->GetComponentLocation()) / 200.0f;
-		WallDistanceServer(WallDistance);
+		if (HasAuthority())
+		{
+			WallDistanceServer(WallDistance);
+		}
 	}
 	else
 	{
-		WallDistanceServer(1.0f);
+		if (HasAuthority())
+		{
+			WallDistanceServer(1.0f);
+		}
 	}
 }
 
@@ -410,7 +429,14 @@ void Afps_cppCharacter::RifleFire()
 							if (F_Procedural_Recoil)
 							{
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
-								PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+								if (HasAuthority())
+								{
+									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+								}
+								else
+								{
+									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+								}
 								bRecoilTimeline->PlayFromStart();
 
 								FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
@@ -458,7 +484,14 @@ void Afps_cppCharacter::PistolFire()
 							if (F_Procedural_Recoil)
 							{
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
-								PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+								if (HasAuthority())
+								{
+									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+								}
+								else
+								{
+									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+								}
 								bRecoilTimeline->PlayFromStart();
 
 								FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
@@ -595,7 +628,6 @@ void Afps_cppCharacter::EquipItem()
 		if (DT_ItemData) {
 			TArray<FName> RowNames = DT_ItemData->GetRowNames();
 			for (int i = 0; i < RowNames.Num(); i++) {
-				UE_LOG(LogTemp, Warning, TEXT("RowName: %s"), *RowNames[i].ToString());
 				if (RowNames[i] == fname)
 				{
 					FItemDataTable* data = DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString());
@@ -708,43 +740,60 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 	FTransform tmpTransform = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), Loc, FVector(1, 1, 1));
 	if (actor) 
 	{
-		UGameplayStatics::ApplyDamage(actor, bCurrentStats.Damage, nullptr, this, nullptr);
-		SpawnBulletHole(tmpTransform);
+		ApplyDamageServer(actor, bCurrentStats.Damage, this);
+		if (HasAuthority())
+		{
+			SpawnBulletHole(tmpTransform);  // Ensure this is called on the server
+		}
 		AActor* HitActor = actor;
 		if (actor->ActorHasTag("Metal"))
 		{
-			SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			PlaySoundAtLocationServer(Loc, RifleImpactSoundCue);
+			if (HasAuthority())
+			{
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
+				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			}
+			else
+			{
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
+				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			}
 		}
 		else if (actor->ActorHasTag("Flesh"))
 		{
-			SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			PlaySoundAtLocationServer(Loc, RifleImpactSoundCue);
-
-			FVector Start = Loc;
-			FVector End = FollowCamera->GetForwardVector() * 1500.0f + Loc;
-			FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
-			TraceParams.AddIgnoredActor(HitActor);
-			FHitResult HitResult;
-
-			bool bHit = GetWorld()->LineTraceSingleByChannel(
-				HitResult,
-				Start,
-				End,
-				ECC_Visibility,
-				TraceParams
-			);
-
-			if (bHit)
+			if (HasAuthority())
 			{
-				AActor* HitActor2 = HitResult.GetActor();
-				FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), HitActor2->GetActorLocation(), FVector(1, 1, 1));
-				SpawnActorToServer(ABulletHole::StaticClass(), tmpTransform2, ESpawnActorCollisionHandlingMethod::Undefined);
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
+				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+
+				FVector Start = Loc;
+				FVector End = FollowCamera->GetForwardVector() * 1500.0f + Loc;
+				FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
+				TraceParams.AddIgnoredActor(HitActor);
+				FHitResult HitResult;
+
+				bool bHit = GetWorld()->LineTraceSingleByChannel(
+					HitResult,
+					Start,
+					End,
+					ECC_Visibility,
+					TraceParams
+				);
+
+				if (bHit)
+				{
+					AActor* HitActor2 = HitResult.GetActor();
+					FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), HitActor2->GetActorLocation(), FVector(1, 1, 1));
+					SpawnBulletHole(tmpTransform2);
+				}
 			}
 		}
 		else {
-			SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			PlaySoundAtLocationServer(Loc, RifleImpactSoundCue);
+			if (HasAuthority())
+			{
+				PlaySoundAtLocationServer(Loc, RiflelSurfacempactSoundCue);
+				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			}
 		}
 	}
 	
@@ -929,14 +978,10 @@ bool Afps_cppCharacter::SpawnPickupActorServer_Validate(FTransform SpawnTransfor
 
 void Afps_cppCharacter::SpawnBulletHole_Implementation(FTransform SpawnTransform)
 {
-	if (HasAuthority())
+	if (GetWorld())
 	{
-		if (GetWorld())
-		{
-			ABulletHole* NewActor = GetWorld()->SpawnActor<ABulletHole>(ABulletHole::StaticClass(), SpawnTransform);
-		}
+		ABulletHole* NewActor = GetWorld()->SpawnActor<ABulletHole>(ABulletHole::StaticClass(), SpawnTransform);
 	}
-	
 }
 
 bool Afps_cppCharacter::SpawnBulletHole_Validate(FTransform SpawnTransform)
@@ -994,25 +1039,52 @@ void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 void Afps_cppCharacter::IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform)
 {
 	AActor* ChildActor = WeaponBase->GetChildActor();
-	if (ChildActor && !ChildActor->IsPendingKillEnabled())
+	if (!ChildActor)
 	{
-		AWeapon_Base* Weapon_Base = Cast<AWeapon_Base>(ChildActor);
-		if (Weapon_Base)
-		{
-			USkeletalMeshComponent* WeaponMesh = Weapon_Base->GetSkeletalMeshComponent();
-			if (WeaponMesh)
-			{
-				FTransform WeaponSocketTransform = WeaponMesh->GetSocketTransform(FName("LHIK"), RTS_World);
-				FVector OutPosition;
-				FRotator OutRotation;
-				WeaponMesh->TransformToBoneSpace(FName("hand_r"), WeaponSocketTransform.GetLocation(), FRotator(WeaponSocketTransform.GetRotation()), OutPosition, OutRotation);
-
-				OutTransform.SetLocation(OutPosition);
-				OutTransform.SetRotation(FQuat(OutRotation));
-				OutTransform.SetScale3D(FVector(1, 1, 1));
-			}
-		}
+		UE_LOG(LogTemp, Warning, TEXT("ChildActor is null"));
+		return;
 	}
+
+	if (!IsValid(ChildActor))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ChildActor is pending kill"));
+		return;
+	}
+
+	AWeapon_Base* Weapon_Base = Cast<AWeapon_Base>(ChildActor);
+	if (!IsValid(Weapon_Base))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to cast ChildActor to AWeapon_Base"));
+		return;
+	}
+
+	USkeletalMeshComponent* WeaponMesh = Weapon_Base->GetSkeletalMeshComponent();
+	if (!IsValid(WeaponMesh))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("WeaponMesh is null"));
+		return;
+	}
+
+	if (!WeaponMesh->DoesSocketExist(FName("LHIK")))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Socket LHIK does not exist"));
+		return;
+	}
+
+	if (!GetMesh()->DoesSocketExist(FName("hand_r")))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Socket hand_r does not exist"));
+		return;
+	}
+
+	FTransform WeaponSocketTransform = WeaponMesh->GetSocketTransform(FName("LHIK"), RTS_World);
+	FVector OutPosition;
+	FRotator OutRotation;
+	GetMesh()->TransformToBoneSpace(FName("hand_r"), WeaponSocketTransform.GetLocation(), FRotator(WeaponSocketTransform.GetRotation()), OutPosition, OutRotation);
+
+	OutTransform.SetLocation(OutPosition);
+	OutTransform.SetRotation(FQuat(OutRotation));
+	OutTransform.SetScale3D(FVector(1, 1, 1));
 }
 
 void Afps_cppCharacter::IF_GetHandSwayFloats_Implementation(float& SideMove, float& MouseX, float& MouseY)

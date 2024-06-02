@@ -49,8 +49,8 @@ AProjectileBullet::AProjectileBullet()
 	}
 	
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-	ProjectileMovement->InitialSpeed = 40000.0f;
-	ProjectileMovement->MaxSpeed = 40000.0f;
+	ProjectileMovement->InitialSpeed = 20000.0f;
+	ProjectileMovement->MaxSpeed = 20000.0f;
 	ProjectileMovement->bInitialVelocityInLocalSpace = true;
 	ProjectileMovement->ProjectileGravityScale = 0.0f;
 
@@ -72,30 +72,43 @@ void AProjectileBullet::Tick(float DeltaTime)
 
 void AProjectileBullet::BoxComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (OtherActor) 
+	if (OtherActor)
 	{
-		if (!OtherActor->ActorHasTag("Bullet") && OtherActor != Player)
+		if (OtherActor)
 		{
-			if (!bHasExecuted)
+			if (!OtherActor->ActorHasTag("Bullet") && OtherActor != Player)
 			{
-				bHasExecuted = true;
-
-				if (OtherActor->GetClass()->ImplementsInterface(UPlayerInterface::StaticClass()))
+				if (!bHasExecuted)
 				{
-					IPlayerInterface::Execute_IF_ReceiveProjectileImpact(OtherActor, this, OtherComp, Hit.Location, Hit.Normal);
-					AStaticMeshActor* staticActor = Cast<AStaticMeshActor>(OtherActor);
-					if (staticActor)
+					bHasExecuted = true;
+
+					if (OtherActor->GetClass()->ImplementsInterface(UPlayerInterface::StaticClass()))
 					{
-						this->Destroy();
+						IPlayerInterface::Execute_IF_ReceiveProjectileImpact(OtherActor, this, OtherComp, Hit.Location, Hit.Normal);
 					}
-					else
+
+					// Check if the other actor is a static mesh or landscape, and destroy the bullet
+					AStaticMeshActor* StaticActor = Cast<AStaticMeshActor>(OtherActor);
+					ALandscape* Landscape = Cast<ALandscape>(OtherActor);
+					if (StaticActor || Landscape)
 					{
-						ALandscape* landScape = Cast<ALandscape>(OtherActor);
-						if (landScape)
+						// Calculate the spawn transform for the bullet hole
+						FTransform SpawnTransform;
+						SpawnTransform.SetLocation(Hit.Location);
+						SpawnTransform.SetRotation(FQuat(Hit.Normal.Rotation()));
+
+						Afps_cppCharacter* GetPlayer = Cast<Afps_cppCharacter>(Player);
+						// Call the function to spawn the bullet hole
+						if (HasAuthority())
 						{
-							this->Destroy();
+							GetPlayer->SpawnBulletHole(SpawnTransform);
+						}
+						else
+						{
+							GetPlayer->SpawnBulletHole(SpawnTransform);
 						}
 
+						this->Destroy();
 					}
 				}
 			}
@@ -114,10 +127,24 @@ void AProjectileBullet::BoxComponentBeginOverlap(UPrimitiveComponent* Overlapped
 			if (bHasExecuted)
 			{
 				bHasExecuted = true;
+				Afps_cppCharacter* GetPlayer = Cast<Afps_cppCharacter>(Player);
 				if (OtherActor->GetClass()->ImplementsInterface(UPlayerInterface::StaticClass()))
 				{
 					IPlayerInterface::Execute_IF_ReceiveProjectileImpact(OtherActor, this, OtherComp, SweepResult.Location, SweepResult.Normal);
-					this->Destroy();
+
+					FTransform SpawnTransform;
+					SpawnTransform.SetLocation(SweepResult.Location);
+					SpawnTransform.SetRotation(FQuat(SweepResult.Normal.Rotation()));
+
+					// Call the function to spawn the bullet hole
+					if (HasAuthority())
+					{
+						GetPlayer->SpawnBulletHole(SpawnTransform);
+					}
+					else
+					{
+						GetPlayer->SpawnBulletHole(SpawnTransform);
+					}
 				}
 			}
 		}

@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/DecalComponent.h" 
+#include "Components/TimelineComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "BulletHole.generated.h"
 
 UCLASS()
@@ -17,6 +19,23 @@ class FPS_CPP_API ABulletHole : public AActor
 
 	UPROPERTY(EditAnywhere, Category = "Decal")
 	UMaterialInterface* BulletHoleMaterial;
+
+	UPROPERTY(EditAnywhere)
+	UCurveFloat* TimelineCurve;
+
+	UPROPERTY(EditAnywhere)
+	UTimelineComponent* Timeline;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	UMaterialInstanceDynamic* DynamicMaterialInstance;
+
+	UPROPERTY()
+	FTimeline MyTimeline;
+
+	UFUNCTION()
+	void TimelineUpdate(float Value);
+
+	void RecoilProgress();
 	
 public:	
 	// Sets default values for this actor's properties
