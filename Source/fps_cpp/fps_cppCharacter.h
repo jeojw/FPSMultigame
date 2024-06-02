@@ -12,6 +12,7 @@
 #include "PickUpBase.h"
 #include "Shell_Base.h"
 #include "ProjectileBullet.h"
+#include "Sound/SoundCue.h"
 #include "Components/TimelineComponent.h"
 #include "fps_cppCharacter.generated.h"
 
@@ -273,7 +274,7 @@ public:
 	void DropItem();
 
 	UFUNCTION(BlueprintCallable)
-	void EquiptItem();
+	void EquipItem();
 
 	UFUNCTION(BlueprintCallable)
 	void ReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);

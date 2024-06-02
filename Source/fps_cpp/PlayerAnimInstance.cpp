@@ -117,7 +117,7 @@ void UPlayerAnimInstance::AddItemToInventory(Afps_cppCharacter* Player, UInvento
                 if (pickUp) {
                     Server_DeleteItem(pickUp);
                     Player->SetCurrentItemSelection(0);
-                    Player->EquiptItem();
+                    Player->EquipItem();
                 }
             }
         }

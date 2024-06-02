@@ -97,7 +97,7 @@ void UPlayerInterfaceImplement::IF_AddItemToInventory_Implementation(const FDyna
             if (pickUp) {
                 Server_DeleteItem(pickUp);
                 Player->SetCurrentItemSelection(0);
-                Player->EquiptItem();
+                Player->EquipItem();
             }
         }
     }

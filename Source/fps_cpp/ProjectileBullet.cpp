@@ -31,6 +31,15 @@ AProjectileBullet::AProjectileBullet()
 		Box->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Overlap);
 		Box->SetCollisionResponseToChannel(ECC_Vehicle, ECR_Overlap);
 		Box->SetCollisionResponseToChannel(ECC_Destructible, ECR_Overlap);
+
+		Box->SetBoxExtent(FVector(3, 3, 3));
+
+		FScriptDelegate OnHitDelegate, OnOverlapDelegate;
+		OnHitDelegate.BindUFunction(this, "BoxComponentHit");
+		OnOverlapDelegate.BindUFunction(this, "BoxComponentBeginOverlap");
+
+		Box->OnComponentHit.AddUnique(OnHitDelegate);
+		Box->OnComponentBeginOverlap.AddUnique(OnOverlapDelegate);
 	}
 
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> ParticleSystemAsset(TEXT("/Game/MilitaryWeapSilver/FX/P_AssaultRifle_Tracer_01"));
@@ -43,6 +52,7 @@ AProjectileBullet::AProjectileBullet()
 	ProjectileMovement->InitialSpeed = 40000.0f;
 	ProjectileMovement->MaxSpeed = 40000.0f;
 	ProjectileMovement->bInitialVelocityInLocalSpace = true;
+	ProjectileMovement->ProjectileGravityScale = 0.0f;
 
 	bHasExecuted = false;
 }
@@ -62,28 +72,52 @@ void AProjectileBullet::Tick(float DeltaTime)
 
 void AProjectileBullet::BoxComponentHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	if (OtherActor) {
-		Afps_cppCharacter* Player = Cast<Afps_cppCharacter>(OtherActor);
-		if (!OtherActor->ActorHasTag("Bullet") && !OtherActor->ActorHasTag("Player"))
+	if (OtherActor) 
+	{
+		if (!OtherActor->ActorHasTag("Bullet") && OtherActor != Player)
 		{
 			if (!bHasExecuted)
 			{
 				bHasExecuted = true;
-				AStaticMeshActor* staticActor = Cast<AStaticMeshActor>(OtherActor);
-				if (staticActor)
-				{
-					Player->IF_ReceiveProjectileImpact(OtherActor, OtherComp, Hit.Location, Hit.Normal);
-					OtherActor->Destroy();
-				}
-				else
-				{
-					ALandscape* landScape = Cast<ALandscape>(OtherActor);
-					if (landScape)
-					{
-						Player->IF_ReceiveProjectileImpact(OtherActor, OtherComp, Hit.Location, Hit.Normal);
-						OtherActor->Destroy();
-					}
 
+				if (OtherActor->GetClass()->ImplementsInterface(UPlayerInterface::StaticClass()))
+				{
+					IPlayerInterface::Execute_IF_ReceiveProjectileImpact(OtherActor, this, OtherComp, Hit.Location, Hit.Normal);
+					AStaticMeshActor* staticActor = Cast<AStaticMeshActor>(OtherActor);
+					if (staticActor)
+					{
+						this->Destroy();
+					}
+					else
+					{
+						ALandscape* landScape = Cast<ALandscape>(OtherActor);
+						if (landScape)
+						{
+							this->Destroy();
+						}
+
+					}
+				}
+			}
+		}
+	}
+}
+
+void AProjectileBullet::BoxComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor)
+	{
+		if (!OtherActor->ActorHasTag(TEXT("Bullet")) && 
+			OtherActor != Player && 
+			(OtherActor->ActorHasTag(TEXT("Player")) || OtherActor->ActorHasTag(TEXT("Enemy"))))
+		{
+			if (bHasExecuted)
+			{
+				bHasExecuted = true;
+				if (OtherActor->GetClass()->ImplementsInterface(UPlayerInterface::StaticClass()))
+				{
+					IPlayerInterface::Execute_IF_ReceiveProjectileImpact(OtherActor, this, OtherComp, SweepResult.Location, SweepResult.Normal);
+					this->Destroy();
 				}
 			}
 		}

@@ -18,7 +18,7 @@
 #include "Sound/SoundCue.h"
 #include "PlayerInterfaceImplement.h"
 #include "Particles/ParticleSystem.h"
-#include <Kismet/KismetMathLibrary.h>
+#include "Kismet/KismetMathLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -143,7 +143,7 @@ void Afps_cppCharacter::BeginPlay()
 
 	CheckWallTick();
 	
-	EquiptItem();
+	EquipItem();
 }
 
 void Afps_cppCharacter::Tick(float DeltaTime)
@@ -394,30 +394,32 @@ void Afps_cppCharacter::RifleFire()
 					false
 				);
 				InventoryComponent->ReduceBullet(bCurrentItemSelection);
-
-				AWeapon_Base* Weapon = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
-				if (Weapon)
+				if (WeaponBase && WeaponBase->GetChildActor())
 				{
-					FTransform ShellTransform;
-					IGunInterface::Execute_GetShellTransform(Weapon, ShellTransform);
-					EjectShell(ShellTransform.GetLocation(), FRotator(ShellTransform.GetRotation()));
-					FireProjectileToDirection();
-					
-					if (GetMesh()->GetAnimInstance())
+					AWeapon_Base* Weapon = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
+					if (Weapon)
 					{
-						UFunction* F_Procedural_Recoil = GetMesh()->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
-						if (F_Procedural_Recoil)
+						FTransform ShellTransform;
+						IGunInterface::Execute_GetShellTransform(Weapon, ShellTransform);
+						EjectShell(ShellTransform.GetLocation(), FRotator(ShellTransform.GetRotation()));
+						FireProjectileToDirection();
+
+						if (GetMesh()->GetAnimInstance())
 						{
-							GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
-							PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
-							bRecoilTimeline->PlayFromStart();
+							UFunction* F_Procedural_Recoil = GetMesh()->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
+							if (F_Procedural_Recoil)
+							{
+								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
+								PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+								bRecoilTimeline->PlayFromStart();
 
-							FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
-							SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
-							GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
+								FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
+								SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
+							}
 						}
-					}
 
+					}
 				}
 			}
 		}
@@ -440,30 +442,32 @@ void Afps_cppCharacter::PistolFire()
 					false
 				);
 				InventoryComponent->ReduceBullet(bCurrentItemSelection);
-
-				AWeapon_Base* Weapon = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
-				if (Weapon)
+				if (WeaponBase && WeaponBase->GetChildActor())
 				{
-					FTransform ShellTransform;
-					IGunInterface::Execute_GetShellTransform(Weapon, ShellTransform);
-					EjectShell(ShellTransform.GetLocation(), FRotator(ShellTransform.GetRotation()));
-					FireProjectileToDirection();
-
-					if (GetMesh()->GetAnimInstance())
+					AWeapon_Base* Weapon = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
+					if (Weapon)
 					{
-						UFunction* F_Procedural_Recoil = GetMesh()->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
-						if (F_Procedural_Recoil)
+						FTransform ShellTransform;
+						IGunInterface::Execute_GetShellTransform(Weapon, ShellTransform);
+						EjectShell(ShellTransform.GetLocation(), FRotator(ShellTransform.GetRotation()));
+						FireProjectileToDirection();
+
+						if (GetMesh()->GetAnimInstance())
 						{
-							GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
-							PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
-							bRecoilTimeline->PlayFromStart();
+							UFunction* F_Procedural_Recoil = GetMesh()->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
+							if (F_Procedural_Recoil)
+							{
+								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
+								PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+								bRecoilTimeline->PlayFromStart();
 
-							FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
-							SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
-							GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
+								FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
+								SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
+							}
 						}
-					}
 
+					}
 				}
 			}
 		}
@@ -511,24 +515,31 @@ void Afps_cppCharacter::Reload()
 		bIsAiming = false;
 		bIsAttacking = false;
 		StopLeftHandIKServer(true);
-		AWeapon_Base* WB = Cast<AWeapon_Base>(WeaponBase);
-		if (WB)
+		if (WeaponBase && WeaponBase->GetChildActor())
 		{
-			WB->PlayReloadAnimation(nullptr);
-		}
-		PlayAnimMontageServer(bCurrentReloadAnimation);
-		GetWorld()->GetTimerManager().SetTimer(
-			bFireCooldownTimer,
-			this,
-			&Afps_cppCharacter::ReloadDelayCompleted,
-			bCurrentStats.ReloadTime,
-			false
-		);
+			AWeapon_Base* WB = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
+			if (WB)
+			{
+				WB->PlayReloadAnimation(nullptr);
+			}
+			if (bCurrentReloadAnimation)
+			{
+				PlayAnimMontageServer(bCurrentReloadAnimation);
+				GetWorld()->GetTimerManager().SetTimer(
+					bFireCooldownTimer,
+					this,
+					&Afps_cppCharacter::ReloadDelayCompleted,
+					bCurrentStats.ReloadTime,
+					false
+				);
 
-		if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
-		{
-			InventoryComponent->ReloadBullet(bCurrentItemSelection, bCurrentStats);
-			StopLeftHandIKServer(false);
+				if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
+				{
+					InventoryComponent->ReloadBullet(bCurrentItemSelection, bCurrentStats);
+					StopLeftHandIKServer(false);
+				}
+			}
+			
 		}	
 	}
 }
@@ -554,12 +565,12 @@ void Afps_cppCharacter::DropItem()
 
 			InventoryComponent->GetInventory().RemoveAt(bCurrentItemSelection);
 			bCurrentItemSelection = 0;
-			EquiptItem();
+			EquipItem();
 		}
 	}
 }
 
-void Afps_cppCharacter::EquiptItem()
+void Afps_cppCharacter::EquipItem()
 {
 	if (IsLocallyControlled()) {
 		if (!InventoryComponent) {
@@ -657,6 +668,7 @@ void Afps_cppCharacter::FireProjectileToDirection()
 		SpawnTransform = FTransform(Selected, MuzzlePointLocalLocation, FVector(1, 1, 1));
 
 		AProjectileBullet* SpawnedBulletActor = GetWorld()->SpawnActor<AProjectileBullet>(AProjectileBullet::StaticClass(), SpawnTransform, SpawnParams);
+		SpawnedBulletActor->SetPlayer(this);
 		SpawnedBulletActor->GetProjectileMovment()->Velocity *= 1.0f;
 	}
 	else
@@ -686,6 +698,7 @@ void Afps_cppCharacter::FireProjectileToDirection()
 
 		SpawnTransform = FTransform(Selected, tmpTransform.GetLocation(), tmpTransform.GetScale3D());
 		AProjectileBullet* SpawnedBulletActor = GetWorld()->SpawnActor<AProjectileBullet>(AProjectileBullet::StaticClass(), SpawnTransform, SpawnParams);
+		SpawnedBulletActor->SetPlayer(this);
 		SpawnedBulletActor->GetProjectileMovment()->Velocity *= 10000.0f;;
 	}
 }
@@ -1044,7 +1057,7 @@ void Afps_cppCharacter::IF_AddItemToInventory_Implementation(const FDynamicInven
 		if (pickUp) {
 			Server_DeleteItem(pickUp);
 			bCurrentItemSelection = 0;
-			EquiptItem();
+			EquipItem();
 		}
 	}
 }
