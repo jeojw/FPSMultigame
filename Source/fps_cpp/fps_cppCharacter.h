@@ -163,9 +163,11 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UCurveFloat* bRecoilCurve;
 
 	USoundCue* RifleImpactSoundCue;
-	USoundCue* RiflelSurfacempactSoundCue;
+	USoundCue* RifleSurfaceImpactSoundCue;
+	USoundCue* PistolSurfaceImpactSoundCue;
 	UParticleSystem* MuzzleFlashParticleSystem;
 	UParticleSystem* MetalImpactParticleSystem;
+	UParticleSystem* StoneImpactParticleSystem;
 
 	FTimerHandle CheckWallTimerHandle;
 

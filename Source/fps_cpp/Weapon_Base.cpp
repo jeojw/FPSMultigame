@@ -2,6 +2,7 @@
 
 
 #include "Weapon_Base.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AWeapon_Base::AWeapon_Base()
@@ -12,7 +13,19 @@ AWeapon_Base::AWeapon_Base()
 	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
 	SkeletalMesh->SetupAttachment(RootComponent);
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshAsset(TEXT("/Game/FPS_Weapon_Bundle/Weapons/Meshes/AR4/SK_AR4"));
+	static ConstructorHelpers::FObjectFinder<UAnimSequence> ShotSequenceFinder(TEXT("/Game/MilitaryWeapSilver/Weapons/Animations/Fire_Rifle_W"));
+	if (ShotSequenceFinder.Succeeded())
+	{
+		ShotSequence = ShotSequenceFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UAnimSequence> ReloadSequenceFinder(TEXT("/Game/MilitaryWeapSilver/Weapons/Animations/Prone_Reload_Rifle_W"));
+	if (ReloadSequenceFinder.Succeeded())
+	{
+		ReloadSequence = ReloadSequenceFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshAsset(TEXT("/Game/MilitaryWeapSilver/Weapons/Assault_Rifle_A"));
 	if (SkeletalMeshAsset.Succeeded())
 	{
 		SkeletalMesh->SetSkeletalMesh(SkeletalMeshAsset.Object);
@@ -40,13 +53,19 @@ void AWeapon_Base::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-}
-
-void AWeapon_Base::PlayReloadAnimation(UAnimSequence* ReloadAnimation)
-{
-	if (SkeletalMesh && ReloadAnimation)
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+	if (PlayerPawn)
 	{
-		SkeletalMesh->PlayAnimation(ReloadAnimation, false); // false means not looping
+		APlayerController* PlayerController = Cast<APlayerController>(PlayerPawn->GetController());
+		if (PlayerController)
+		{
+			FVector CameraLocation;
+			FRotator CameraRotation;
+			PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+			// AimOffset 업데이트
+			UpdateAimOffset(FVector(15, 15 ,15));
+		}
 	}
 }
 void AWeapon_Base::GetShellTransform_Implementation(FTransform& T)
@@ -55,4 +74,20 @@ void AWeapon_Base::GetShellTransform_Implementation(FTransform& T)
 	T = SocketTransform;
 }
 
+void AWeapon_Base::UpdateAimOffset(FVector NewLocation)
+{
+	if (AimOffset)
+	{
+		AimOffset->SetRelativeLocation(NewLocation);
+	}
+}
 
+void AWeapon_Base::PlayShotSequence()
+{
+
+}
+
+void AWeapon_Base::PlayReloadSequence()
+{
+
+}

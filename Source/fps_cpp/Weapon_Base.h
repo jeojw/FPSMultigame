@@ -24,6 +24,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FTransform bSocketTransform;
+
+	UPROPERTY(EditAnywhere)
+	UAnimSequence* ShotSequence;
+
+	UPROPERTY(EditAnywhere)
+	UAnimSequence* ReloadSequence;
 	
 public:	
 	// Sets default values for this actor's properties
@@ -45,6 +51,10 @@ public:
 
 	virtual void GetShellTransform_Implementation(FTransform& T) override;
 
-	UFUNCTION(BlueprintCallable)
-	void PlayReloadAnimation(UAnimSequence* ReloadAnimation);
+	UFUNCTION()
+	void UpdateAimOffset(FVector NewLocation);
+
+	void PlayShotSequence();
+
+	void PlayReloadSequence();
 };

@@ -3,3 +3,6 @@
 
 #include "PlayerWidget.h"
 
+void UPlayerWidget::NativeConstruct()
+{
+}

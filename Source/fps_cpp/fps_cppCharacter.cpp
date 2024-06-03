@@ -20,6 +20,8 @@
 #include "Particles/ParticleSystem.h"
 #include "BloodDecal.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Weapon_Base_Pistol.h"
+#include "Weapon_Base_M4.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -101,10 +103,16 @@ Afps_cppCharacter::Afps_cppCharacter()
 		RifleImpactSoundCue = SoundCueFinder.Object;
 	}
 
-	static ConstructorHelpers::FObjectFinder<USoundCue> SurfaceSoundFinder(TEXT("/Game/MilitaryWeapDark/Sound/Rifle/Rifle_ImpactSurface_Cue.Rifle_ImpactSurface_Cue"));
-	if (SurfaceSoundFinder.Succeeded())
+	static ConstructorHelpers::FObjectFinder<USoundCue> RifleSurfaceSoundFinder(TEXT("/Game/MilitaryWeapDark/Sound/Rifle/Rifle_ImpactSurface_Cue.Rifle_ImpactSurface_Cue"));
+	if (RifleSurfaceSoundFinder.Succeeded())
 	{
-		RiflelSurfacempactSoundCue = SurfaceSoundFinder.Object;
+		RifleSurfaceImpactSoundCue = RifleSurfaceSoundFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundCue> PistolurfaceSoundFinder(TEXT("/Game/MilitaryWeapSilver/Sound/Pistol/Cues/PistolA_Fire_Cue"));
+	if (PistolurfaceSoundFinder.Succeeded())
+	{
+		PistolSurfaceImpactSoundCue = PistolurfaceSoundFinder.Object;
 	}
 
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> EmitterTemplateFinder(TEXT("/Game/MilitaryWeapDark/FX/P_AssaultRifle_MuzzleFlash"));
@@ -117,6 +125,12 @@ Afps_cppCharacter::Afps_cppCharacter()
 	if (MetalImpactFinder.Succeeded())
 	{
 		MetalImpactParticleSystem = MetalImpactFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UParticleSystem> StoneImpactFinder(TEXT("/Game/MilitaryWeapDark/FX/P_Impact_Stone_Large_01"));
+	if (StoneImpactFinder.Succeeded())
+	{
+		StoneImpactParticleSystem = StoneImpactFinder.Object;
 	}
 }
 
@@ -427,7 +441,7 @@ void Afps_cppCharacter::RifleFire()
 				InventoryComponent->ReduceBullet(bCurrentItemSelection);
 				if (WeaponBase && WeaponBase->GetChildActor())
 				{
-					AWeapon_Base* Weapon = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
+					AWeapon_Base_M4* Weapon = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
 					if (Weapon)
 					{
 						FTransform ShellTransform;
@@ -441,6 +455,7 @@ void Afps_cppCharacter::RifleFire()
 							if (F_Procedural_Recoil)
 							{
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
+								Weapon->PlayShotSequence();
 								if (HasAuthority())
 								{
 									PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
@@ -487,9 +502,9 @@ void Afps_cppCharacter::PistolFire()
 					false
 				);
 				InventoryComponent->ReduceBullet(bCurrentItemSelection);
-				if (WeaponBase && WeaponBase->GetChildActor())
+				if (AWeapon_Base_Pistol::StaticClass())
 				{
-					AWeapon_Base* Weapon = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
+					AWeapon_Base_Pistol* Weapon = Cast<AWeapon_Base_Pistol>(AWeapon_Base_Pistol::StaticClass());
 					if (Weapon)
 					{
 						FTransform ShellTransform;
@@ -505,11 +520,11 @@ void Afps_cppCharacter::PistolFire()
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
-									PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+									PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), PistolSurfaceImpactSoundCue);
 								}
 								else
 								{
-									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), PistolSurfaceImpactSoundCue);
 								}
 								bRecoilTimeline.PlayFromStart();
 
@@ -585,10 +600,6 @@ void Afps_cppCharacter::Reload()
 		if (WeaponBase && WeaponBase->GetChildActor())
 		{
 			AWeapon_Base* WB = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
-			if (WB)
-			{
-				WB->PlayReloadAnimation(nullptr);
-			}
 			if (bCurrentReloadAnimation)
 			{
 				if (HasAuthority())
@@ -599,6 +610,19 @@ void Afps_cppCharacter::Reload()
 				{
 					PlayAnimMontageServer(bCurrentReloadAnimation);
 				}
+
+				AWeapon_Base_M4* WB_M4 = Cast<AWeapon_Base_M4>(WB);
+				if (WB_M4)
+				{
+					WB_M4->PlayReloadSequence();
+				}
+
+				AWeapon_Base_Pistol* WB_Pistol = Cast<AWeapon_Base_Pistol>(WB);
+				if (WB_Pistol)
+				{
+					WB_Pistol->PlayReloadSequence();
+				}
+
 				GetWorld()->GetTimerManager().SetTimer(
 					bFireCooldownTimer,
 					this,
@@ -815,29 +839,51 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 		{
 			SpawnBulletHoleServer(tmpTransform);
 		}
+		USoundCue* WeaponSound = nullptr;
+		if (bCurrentWeaponClass == AWeapon_Base_M4::StaticClass())
+		{
+			WeaponSound = RifleSurfaceImpactSoundCue;
+		}
+		else if (bCurrentWeaponClass == AWeapon_Base_Pistol::StaticClass())
+		{
+			WeaponSound = PistolSurfaceImpactSoundCue;
+		}
 		if (actor->ActorHasTag("Metal"))
 		{
 			if (HasAuthority())
 			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 			else
 			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			}
+		}
+		else if (actor->ActorHasTag("Stone"))
+		{
+			if (HasAuthority())
+			{
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
+				SpawnEmitterAtLocationMulticast(StoneImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			}
+			else
+			{
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
+				SpawnEmitterAtLocationServer(StoneImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 		}
 		else if (actor->ActorHasTag("Player"))
 		{
 			if (HasAuthority())
 			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 			else
 			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 
