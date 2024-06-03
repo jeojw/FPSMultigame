@@ -156,8 +156,8 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	FTimerHandle bShellEjectTimer;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UTimelineComponent* bRecoilTimeline;
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	FTimeline bRecoilTimeline;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UCurveFloat* bRecoilCurve;
@@ -285,48 +285,56 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void FireProjectileToDirection();
 
-	UFUNCTION(NetMulticast, Unreliable, BlueprintCallable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void PlaySoundAtLocationMulticast(FVector Location, USoundBase* Sound);
-
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void PlaySoundAtLocationServer(FVector Location, USoundBase* Sound);
 
-	UFUNCTION(NetMulticast, Unreliable, BlueprintCallable)
+	UFUNCTION(NetMulticast, Unreliable)
 	void SpawnEmitterAtLocationMulticast(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
-
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void SpawnEmitterAtLocationServer(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
 
+	UFUNCTION(NetMulticast, Unreliable)
+	void SpawnActorToMulticast(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void SpawnActorToServer(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
 
-	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
+	UFUNCTION(NetMulticast, Reliable)
 	void PlayAnimMontageMulticast(UAnimMontage* AnimMontage);
-
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void PlayAnimMontageServer(UAnimMontage* AnimMontage);
 
-	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
+	UFUNCTION(NetMulticast, Reliable)
 	void SetWeaponClassMulticast(TSubclassOf<AActor> WBase);
-
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetWeaponClassServer(TSubclassOf<AActor> WBase);
 
+	UFUNCTION(Server, Reliable)
+	void SetStatsToMulticast(FWeaponStatsStruct CurrentStats);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetStatsToServer(FWeaponStatsStruct CurrentStats);
 
+	UFUNCTION(NetMulticast, Unreliable)
+	void StopLeftHandIKMulticast(bool StopLeftHandIK);
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void StopLeftHandIKServer(bool StopLeftHandIK);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void SetAnimStateMulticast(EAnimStateEnum AnimState);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetAnimStateServer(EAnimStateEnum AnimState);
 
 	UFUNCTION()
 	void OnRep_AnimState();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void SpawnBulletHoleMulticast(FTransform SpawnTransform);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
-	void SpawnBulletHole(FTransform SpawnTransform);
+	void SpawnBulletHoleServer(FTransform SpawnTransform);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void SpawnPickupActorMulticast(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SpawnPickupActorServer(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
 
@@ -341,6 +349,8 @@ public:
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void WallDistanceServer(float WallDistance);
+	UFUNCTION(NetMulticast, Reliable)
+	void WallDistanceMulticast(float WallDistance);
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
@@ -377,6 +387,7 @@ protected:
 	void SpawnEmitterAtLocationMulticast_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
 	void SpawnEmitterAtLocationServer_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
 
+	void SpawnActorToMulticast_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
 	void SpawnActorToServer_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
 
 	void SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase);
@@ -386,21 +397,26 @@ protected:
 	void SprintServer_Implementation(float MaxWalkSpeed);
 	bool SprintServer_Validate(float MaxWalkSpeed);
 
+	void StopLeftHandIKMulticast_Implementation(bool StopLeftHandIK);
 	void StopLeftHandIKServer_Implementation(bool StopLeftHandIK);
 
+	void SetStatsToMulticast_Implementation(FWeaponStatsStruct CurrentStats);
 	void SetStatsToServer_Implementation(FWeaponStatsStruct CurrentStats);
 	bool SetStatsToServer_Validate(FWeaponStatsStruct CurrentStats);
 
-	void SpawnBulletHole_Implementation(FTransform SpawnTransform);
-	bool SpawnBulletHole_Validate(FTransform SpawnTransform);
+	void SpawnBulletHoleMulticast_Implementation(FTransform SpawnTransform);
+	void SpawnBulletHoleServer_Implementation(FTransform SpawnTransform);
+	bool SpawnBulletHoleServer_Validate(FTransform SpawnTransform);
 
 	void PlayAnimMontageMulticast_Implementation(UAnimMontage* AnimMontage);
 	void PlayAnimMontageServer_Implementation(UAnimMontage* AnimMontage);
 	bool PlayAnimMontageServer_Validate(UAnimMontage* AnimMontage);
 
+	void SetAnimStateMulticast_Implementation(EAnimStateEnum AnimState);
 	void SetAnimStateServer_Implementation(EAnimStateEnum AnimState);
 	bool SetAnimStateServer_Validate(EAnimStateEnum AnimState);
 
+	void SpawnPickupActorMulticast_Implementation(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
 	void SpawnPickupActorServer_Implementation(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
 	bool SpawnPickupActorServer_Validate(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
 
@@ -409,6 +425,7 @@ protected:
 
 	void ApplyDamageServer_Implementation(AActor* DamageActor, float BaseDamage, AActor* DamageCauser);
 
+	void WallDistanceMulticast_Implementation(float WallDistance);
 	void WallDistanceServer_Implementation(float WallDistance);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

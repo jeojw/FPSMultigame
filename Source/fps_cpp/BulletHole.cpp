@@ -46,7 +46,7 @@ void ABulletHole::BeginPlay()
         FOnTimelineFloat TimelineCallback;
         TimelineCallback.BindUFunction(this, FName("TimelineUpdate"));
         MyTimeline.AddInterpFloat(TimelineCurve, TimelineCallback);
-        MyTimeline.SetLooping(true);
+        MyTimeline.SetLooping(false);
         MyTimeline.PlayFromStart();
     }
 }
@@ -55,6 +55,10 @@ void ABulletHole::BeginPlay()
 void ABulletHole::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+    if (MyTimeline.IsPlaying())
+    {
+        MyTimeline.TickTimeline(DeltaTime);
+    }
 
 }
 

@@ -13,6 +13,14 @@ class Afps_cppGameMode : public AGameModeBase
 
 public:
 	Afps_cppGameMode();
+	virtual void BeginPlay() override;
+
+protected:
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void Logout(AController* Exiting) override;
+
+private:
+	void InitializeNetworkSettings();
 };
 
 

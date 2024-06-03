@@ -76,8 +76,6 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	bAnimState = EAnimStateEnum::Hands;
 
-	bRecoilTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("RecoilTimeline"));
-
 	static ConstructorHelpers::FObjectFinder<UCurveFloat> Curve(TEXT("/Game/Characters/Mannequins/Animations/RecoilTrack"));
 	if (Curve.Succeeded()) 
 	{
@@ -135,11 +133,11 @@ void Afps_cppCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
-	if (bRecoilCurve && bRecoilTimeline)
+	if (bRecoilCurve)
 	{
 		FOnTimelineFloat RecoilProgressFunction;
 		RecoilProgressFunction.BindUFunction(this, FName("ControllerRecoil"));
-		bRecoilTimeline->AddInterpFloat(bRecoilCurve, RecoilProgressFunction);
+		bRecoilTimeline.AddInterpFloat(bRecoilCurve, RecoilProgressFunction);
 	}
 
 	if (bAnimationBlueprintRef)
@@ -160,7 +158,7 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 	
 	GetWorldTimerManager().SetTimer(bTimerHandle_CheckWallTick, this, &Afps_cppCharacter::CheckWallTick, 0.02f, true);
 
-	bRecoilTimeline->TickComponent(DeltaTime, ELevelTick::LEVELTICK_TimeOnly, nullptr);
+	bRecoilTimeline.TickTimeline(DeltaTime);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -192,12 +190,20 @@ void Afps_cppCharacter::CheckWallTick()
 		float WallDistance = FVector::Distance(HitResult.Location, FollowCamera->GetComponentLocation()) / 200.0f;
 		if (HasAuthority())
 		{
+			WallDistanceMulticast(WallDistance);
+		}
+		else
+		{
 			WallDistanceServer(WallDistance);
 		}
 	}
 	else
 	{
 		if (HasAuthority())
+		{
+			WallDistanceMulticast(1.0f);
+		}
+		else
 		{
 			WallDistanceServer(1.0f);
 		}
@@ -431,16 +437,23 @@ void Afps_cppCharacter::RifleFire()
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
-									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+									PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
 								}
 								else
 								{
 									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
 								}
-								bRecoilTimeline->PlayFromStart();
+								bRecoilTimeline.PlayFromStart();
 
 								FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
-								SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+								if (HasAuthority())
+								{
+									SpawnEmitterAtLocationMulticast(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+								}
+								else
+								{
+									SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+								}
 								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
 							}
 						}
@@ -486,16 +499,24 @@ void Afps_cppCharacter::PistolFire()
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
-									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
+									PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
 								}
 								else
 								{
 									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
 								}
-								bRecoilTimeline->PlayFromStart();
+								bRecoilTimeline.PlayFromStart();
 
 								FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
-								SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+								if (HasAuthority())
+								{
+									SpawnEmitterAtLocationMulticast(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+								}
+								else
+								{
+									SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
+								}
+								
 								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
 							}
 						}
@@ -547,7 +568,14 @@ void Afps_cppCharacter::Reload()
 	{
 		bIsAiming = false;
 		bIsAttacking = false;
-		StopLeftHandIKServer(true);
+		if (HasAuthority())
+		{
+			StopLeftHandIKMulticast(true);
+		}
+		else
+		{
+			StopLeftHandIKServer(true);
+		}
 		if (WeaponBase && WeaponBase->GetChildActor())
 		{
 			AWeapon_Base* WB = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
@@ -557,7 +585,14 @@ void Afps_cppCharacter::Reload()
 			}
 			if (bCurrentReloadAnimation)
 			{
-				PlayAnimMontageServer(bCurrentReloadAnimation);
+				if (HasAuthority())
+				{
+					PlayAnimMontageMulticast(bCurrentReloadAnimation);
+				}
+				else
+				{
+					PlayAnimMontageServer(bCurrentReloadAnimation);
+				}
 				GetWorld()->GetTimerManager().SetTimer(
 					bFireCooldownTimer,
 					this,
@@ -569,7 +604,14 @@ void Afps_cppCharacter::Reload()
 				if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
 				{
 					InventoryComponent->ReloadBullet(bCurrentItemSelection, bCurrentStats);
-					StopLeftHandIKServer(false);
+					if (HasAuthority())
+					{
+						StopLeftHandIKMulticast(false);
+					}
+					else
+					{
+						StopLeftHandIKServer(false);
+					}
 				}
 			}
 			
@@ -594,8 +636,14 @@ void Afps_cppCharacter::DropItem()
 			SpawnTransform.SetLocation(ForwardCameraLocation);
 			SpawnTransform.SetRotation(FQuat(FRotator(0, 0, 0)));
 			SpawnTransform.SetScale3D(FVector(1, 1, 1));
-			SpawnPickupActorServer(SpawnTransform, ESpawnActorCollisionHandlingMethod::Undefined, Item, bCurrentWeaponPickUpClass);
-
+			if (HasAuthority())
+			{
+				SpawnPickupActorMulticast(SpawnTransform, ESpawnActorCollisionHandlingMethod::Undefined, Item, bCurrentWeaponPickUpClass);
+			}
+			else
+			{
+				SpawnPickupActorServer(SpawnTransform, ESpawnActorCollisionHandlingMethod::Undefined, Item, bCurrentWeaponPickUpClass);
+			}
 			InventoryComponent->GetInventory().RemoveAt(bCurrentItemSelection);
 			bCurrentItemSelection = 0;
 			EquipItem();
@@ -633,9 +681,19 @@ void Afps_cppCharacter::EquipItem()
 					FItemDataTable* data = DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString());
 					if (data)
 					{
-						SetWeaponClassServer(data->WeaponClass);
-						SetStatsToServer(data->Stats);
-						SetAnimStateServer(data->AnimState);
+						if (HasAuthority())
+						{
+							SetWeaponClassMulticast(data->WeaponClass);
+							SetStatsToMulticast(data->Stats);
+							SetAnimStateMulticast(data->AnimState);
+						}
+						else
+						{
+							SetWeaponClassServer(data->WeaponClass);
+							SetStatsToServer(data->Stats);
+							SetAnimStateServer(data->AnimState);
+						}
+						
 						SetCurrentStats(data->Stats);
 						SetCurrentReloadAnimation(data->ReloadAnimation);
 						SetCurrentWeaponClass(data->WeaponClass);
@@ -738,20 +796,25 @@ void Afps_cppCharacter::FireProjectileToDirection()
 void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal)
 {
 	FTransform tmpTransform = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), Loc, FVector(1, 1, 1));
-	if (actor) 
+	if (actor)
 	{
 		ApplyDamageServer(actor, bCurrentStats.Damage, this);
+
+		// 서버에서만 호출
 		if (HasAuthority())
 		{
-			SpawnBulletHole(tmpTransform);  // Ensure this is called on the server
+			SpawnBulletHoleMulticast(tmpTransform);
 		}
-		AActor* HitActor = actor;
+		else
+		{
+			SpawnBulletHoleServer(tmpTransform);
+		}
 		if (actor->ActorHasTag("Metal"))
 		{
 			if (HasAuthority())
 			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
-				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
+				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 			else
 			{
@@ -763,40 +826,45 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 		{
 			if (HasAuthority())
 			{
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
+				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			}
+			else
+			{
 				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RiflelSurfacempactSoundCue);
 				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+			}
 
-				FVector Start = Loc;
-				FVector End = FollowCamera->GetForwardVector() * 1500.0f + Loc;
-				FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
-				TraceParams.AddIgnoredActor(HitActor);
-				FHitResult HitResult;
+			FVector Start = Loc;
+			FVector End = FollowCamera->GetForwardVector() * 1500.0f + Loc;
+			FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
+			TraceParams.AddIgnoredActor(actor);  // Ignore the original hit actor
+			FHitResult HitResult;
 
-				bool bHit = GetWorld()->LineTraceSingleByChannel(
-					HitResult,
-					Start,
-					End,
-					ECC_Visibility,
-					TraceParams
-				);
+			bool bHit = GetWorld()->LineTraceSingleByChannel(
+				HitResult,
+				Start,
+				End,
+				ECC_Visibility,
+				TraceParams
+			);
 
-				if (bHit)
+			if (bHit)
+			{
+				AActor* HitActor2 = HitResult.GetActor();
+				FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), HitActor2->GetActorLocation(), FVector(1, 1, 1));
+				if (HasAuthority())
 				{
-					AActor* HitActor2 = HitResult.GetActor();
-					FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), HitActor2->GetActorLocation(), FVector(1, 1, 1));
-					SpawnBulletHole(tmpTransform2);
+					SpawnBulletHoleMulticast(tmpTransform2);
+				}
+				else
+				{
+					SpawnBulletHoleServer(tmpTransform2);
 				}
 			}
-		}
-		else {
-			if (HasAuthority())
-			{
-				PlaySoundAtLocationServer(Loc, RiflelSurfacempactSoundCue);
-				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			}
+
 		}
 	}
-	
 }
 
 void Afps_cppCharacter::DeleteItemServer_Implementation(AActor* DeleteItem)
@@ -806,6 +874,12 @@ void Afps_cppCharacter::DeleteItemServer_Implementation(AActor* DeleteItem)
 
 		if (IPlayerInterface* playerInterface = Cast<IPlayerInterface>(PlayerController->GetCharacter())) {
 			playerInterface->Server_DeleteItem(DeleteItem);
+		}
+	}
+	else {
+		if (DeleteItem && DeleteItem->IsValidLowLevel())
+		{
+			DeleteItem->Destroy();
 		}
 	}
 }
@@ -837,7 +911,10 @@ void Afps_cppCharacter::PlaySoundAtLocationMulticast_Implementation(FVector Loca
 
 void Afps_cppCharacter::PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound)
 {
-	PlaySoundAtLocationMulticast_Implementation(Location, Sound);
+	if (HasAuthority()) {
+		PlaySoundAtLocationMulticast(Location, Sound);
+	}
+	
 }
 
 void Afps_cppCharacter::SpawnEmitterAtLocationMulticast_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale)
@@ -851,24 +928,27 @@ void Afps_cppCharacter::SpawnEmitterAtLocationMulticast_Implementation(UParticle
 
 void Afps_cppCharacter::SpawnEmitterAtLocationServer_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale)
 {
-	SpawnEmitterAtLocationMulticast_Implementation(EmitterTemplate, Location, Rotation, Scale);
+	if (HasAuthority()) {
+		SpawnEmitterAtLocationMulticast(EmitterTemplate, Location, Rotation, Scale);
+	}
+	
 }
 
 void Afps_cppCharacter::SetWeaponClass(TSubclassOf<AActor> WBase)
 {
 	if (HasAuthority())
 	{
-		// 서버 권한이 있는 경우 서버 함수를 호출
+		// 서버 권한이 있는 경우 직접 멀티캐스트 함수를 호출합니다.
 		SetWeaponClassMulticast(WBase);
 	}
 	else
 	{
-		// 클라이언트인 경우 서버 함수 호출을 요청
+		// 클라이언트가 서버에 요청을 보냅니다.
 		SetWeaponClassServer(WBase);
 	}
 }
 
-void Afps_cppCharacter::SpawnActorToServer_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride)
+void Afps_cppCharacter::SpawnActorToMulticast_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride)
 {
 	UWorld* World = GetWorld();
 	if (World && *Class)
@@ -881,6 +961,14 @@ void Afps_cppCharacter::SpawnActorToServer_Implementation(TSubclassOf<AActor> Cl
 		AActor* SpawnedActor = World->SpawnActor<AActor>(Class, SpawnTransform, SpawnParams);
 	}
 }
+void Afps_cppCharacter::SpawnActorToServer_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride)
+{
+	if (HasAuthority()) {
+		SpawnActorToMulticast(Class, SpawnTransform, CollisionHandlingOverride);
+	}
+
+	
+}
 
 void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase)
 {
@@ -892,11 +980,10 @@ void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActo
 
 void Afps_cppCharacter::SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase)
 {
-	if (WBase)
-	{
-		bCurrentWeaponClass = WBase;
+	if (HasAuthority()) {
 		SetWeaponClassMulticast(WBase);
 	}
+	
 }
 
 bool Afps_cppCharacter::SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase)
@@ -904,29 +991,55 @@ bool Afps_cppCharacter::SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase)
 	return true;
 }
 
-void Afps_cppCharacter::StopLeftHandIKServer_Implementation(bool StopLeftHandIK)
+void Afps_cppCharacter::StopLeftHandIKMulticast_Implementation(bool StopLeftHandIK)
 {
 	bStopLeftHandIK = StopLeftHandIK;
 }
 
-void Afps_cppCharacter::SetStatsToServer_Implementation(FWeaponStatsStruct CurrentStats)
+
+void Afps_cppCharacter::StopLeftHandIKServer_Implementation(bool StopLeftHandIK)
 {
-	bCurrentStats = CurrentStats;
+	if (HasAuthority()) {
+		StopLeftHandIKMulticast(StopLeftHandIK);
+	}
+	
 }
+
 
 void Afps_cppCharacter::OnRep_AnimState() {
 	OnAnimStateChanged.Broadcast();
 }
 
-void Afps_cppCharacter::SetAnimStateServer_Implementation(EAnimStateEnum AnimState)
+void Afps_cppCharacter::SetAnimStateMulticast_Implementation(EAnimStateEnum AnimState)
 {
 	bAnimState = AnimState;
 	OnRep_AnimState();
 }
 
+void Afps_cppCharacter::SetAnimStateServer_Implementation(EAnimStateEnum AnimState)
+{
+	if (HasAuthority()) {
+		SetAnimStateMulticast(AnimState);
+	}
+}
+	
+
 bool Afps_cppCharacter::SetAnimStateServer_Validate(EAnimStateEnum AnimState)
 {
 	return true;
+}
+
+void Afps_cppCharacter::SetStatsToMulticast_Implementation(FWeaponStatsStruct CurrentStats)
+{
+	bCurrentStats = CurrentStats;
+}
+
+void Afps_cppCharacter::SetStatsToServer_Implementation(FWeaponStatsStruct CurrentStats)
+{
+	if (HasAuthority()) {
+		SetStatsToMulticast(CurrentStats);
+	}
+	
 }
 
 bool Afps_cppCharacter::SetStatsToServer_Validate(FWeaponStatsStruct CurrentStats)
@@ -941,9 +1054,8 @@ void Afps_cppCharacter::PlayAnimMontageMulticast_Implementation(UAnimMontage* An
 
 void Afps_cppCharacter::PlayAnimMontageServer_Implementation(UAnimMontage* AnimMontage) 
 {
-	if (HasAuthority())
-	{
-		PlayAnimMontageMulticast_Implementation(AnimMontage);
+	if (HasAuthority()) {
+		PlayAnimMontageMulticast(AnimMontage);
 	}
 }
 
@@ -952,23 +1064,28 @@ bool Afps_cppCharacter::PlayAnimMontageServer_Validate(UAnimMontage* AnimMontage
 	return true;
 }
 
+void Afps_cppCharacter::SpawnPickupActorMulticast_Implementation(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class)
+{
+	if (Class)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = CollisionHandlingOverride;
+		SpawnParams.Instigator = nullptr;
+
+		APickUpBase* PickupActor = GetWorld()->SpawnActor<APickUpBase>(Class, SpawnTransform, SpawnParams);
+		if (PickupActor)
+		{
+			PickupActor->SetItem(Item);
+		}
+	}
+}
+
 void Afps_cppCharacter::SpawnPickupActorServer_Implementation(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class)
 {
 	if (HasAuthority())
 	{
-		if (Class)
-		{
-			FActorSpawnParameters SpawnParams;
-			SpawnParams.SpawnCollisionHandlingOverride = CollisionHandlingOverride;
-			SpawnParams.Instigator = nullptr;
-
-			APickUpBase* PickupActor = GetWorld()->SpawnActor<APickUpBase>(Class, SpawnTransform, SpawnParams);
-			if (PickupActor)
-			{
-				PickupActor->SetItem(Item);
-			}
-		}
-	}
+		SpawnPickupActorMulticast(SpawnTransform, CollisionHandlingOverride, Item, Class);
+	}	
 }
 
 bool Afps_cppCharacter::SpawnPickupActorServer_Validate(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class)
@@ -976,7 +1093,7 @@ bool Afps_cppCharacter::SpawnPickupActorServer_Validate(FTransform SpawnTransfor
 	return true;
 }
 
-void Afps_cppCharacter::SpawnBulletHole_Implementation(FTransform SpawnTransform)
+void Afps_cppCharacter::SpawnBulletHoleMulticast_Implementation(FTransform SpawnTransform)
 {
 	if (GetWorld())
 	{
@@ -984,22 +1101,36 @@ void Afps_cppCharacter::SpawnBulletHole_Implementation(FTransform SpawnTransform
 	}
 }
 
-bool Afps_cppCharacter::SpawnBulletHole_Validate(FTransform SpawnTransform)
+void Afps_cppCharacter::SpawnBulletHoleServer_Implementation(FTransform SpawnTransform)
+{
+	if (HasAuthority())
+	{
+		SpawnBulletHoleMulticast(SpawnTransform);
+	}
+	
+}
+
+bool Afps_cppCharacter::SpawnBulletHoleServer_Validate(FTransform SpawnTransform)
 {
 	return true;
 }
 
 void Afps_cppCharacter::ApplyDamageServer_Implementation(AActor* DamageActor, float BaseDamage, AActor* DamageCauser)
 {
-	if (HasAuthority())
-	{
-		UGameplayStatics::ApplyDamage(DamageActor, BaseDamage, nullptr, DamageCauser, nullptr);
-	}
+	UGameplayStatics::ApplyDamage(DamageActor, BaseDamage, nullptr, DamageCauser, nullptr);
 }
 
-void Afps_cppCharacter::WallDistanceServer_Implementation(float WallDistance)
+void Afps_cppCharacter::WallDistanceMulticast_Implementation(float WallDistance)
 {
 	bWallDistance = WallDistance;
+}
+void Afps_cppCharacter::WallDistanceServer_Implementation(float WallDistance)
+{
+	if (HasAuthority()) 
+	{
+		WallDistanceMulticast(WallDistance);
+	}
+	
 }
 
 float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)

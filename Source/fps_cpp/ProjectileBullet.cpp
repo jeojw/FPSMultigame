@@ -82,33 +82,18 @@ void AProjectileBullet::BoxComponentHit(UPrimitiveComponent* HitComponent, AActo
 				{
 					bHasExecuted = true;
 
-					if (OtherActor->GetClass()->ImplementsInterface(UPlayerInterface::StaticClass()))
-					{
-						IPlayerInterface::Execute_IF_ReceiveProjectileImpact(OtherActor, this, OtherComp, Hit.Location, Hit.Normal);
-					}
-
 					// Check if the other actor is a static mesh or landscape, and destroy the bullet
 					AStaticMeshActor* StaticActor = Cast<AStaticMeshActor>(OtherActor);
 					ALandscape* Landscape = Cast<ALandscape>(OtherActor);
 					if (StaticActor || Landscape)
 					{
-						// Calculate the spawn transform for the bullet hole
-						FTransform SpawnTransform;
-						SpawnTransform.SetLocation(Hit.Location);
-						SpawnTransform.SetRotation(FQuat(Hit.Normal.Rotation()));
-
 						Afps_cppCharacter* GetPlayer = Cast<Afps_cppCharacter>(Player);
-						// Call the function to spawn the bullet hole
-						if (HasAuthority())
+						if (GetPlayer)
 						{
-							GetPlayer->SpawnBulletHole(SpawnTransform);
-						}
-						else
-						{
-							GetPlayer->SpawnBulletHole(SpawnTransform);
-						}
+							GetPlayer->ReceiveImpactProjectile(OtherActor, OtherComp, Hit.Location, Hit.Normal);
 
-						this->Destroy();
+							this->Destroy();
+						}
 					}
 				}
 			}
@@ -124,28 +109,17 @@ void AProjectileBullet::BoxComponentBeginOverlap(UPrimitiveComponent* Overlapped
 			OtherActor != Player && 
 			(OtherActor->ActorHasTag(TEXT("Player")) || OtherActor->ActorHasTag(TEXT("Enemy"))))
 		{
-			if (bHasExecuted)
+			if (!bHasExecuted)
 			{
 				bHasExecuted = true;
 				Afps_cppCharacter* GetPlayer = Cast<Afps_cppCharacter>(Player);
-				if (OtherActor->GetClass()->ImplementsInterface(UPlayerInterface::StaticClass()))
+				if (GetPlayer) 
 				{
-					IPlayerInterface::Execute_IF_ReceiveProjectileImpact(OtherActor, this, OtherComp, SweepResult.Location, SweepResult.Normal);
+					GetPlayer->ReceiveImpactProjectile(OtherActor, OtherComp, SweepResult.Location, SweepResult.Normal);
 
-					FTransform SpawnTransform;
-					SpawnTransform.SetLocation(SweepResult.Location);
-					SpawnTransform.SetRotation(FQuat(SweepResult.Normal.Rotation()));
-
-					// Call the function to spawn the bullet hole
-					if (HasAuthority())
-					{
-						GetPlayer->SpawnBulletHole(SpawnTransform);
-					}
-					else
-					{
-						GetPlayer->SpawnBulletHole(SpawnTransform);
-					}
+					this->Destroy();
 				}
+				
 			}
 		}
 	}

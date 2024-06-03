@@ -34,8 +34,6 @@ class FPS_CPP_API ABulletHole : public AActor
 
 	UFUNCTION()
 	void TimelineUpdate(float Value);
-
-	void RecoilProgress();
 	
 public:	
 	// Sets default values for this actor's properties
