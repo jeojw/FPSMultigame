@@ -18,6 +18,7 @@
 #include "Sound/SoundCue.h"
 #include "PlayerInterfaceImplement.h"
 #include "Particles/ParticleSystem.h"
+#include "BloodDecal.h"
 #include "Kismet/KismetMathLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -75,6 +76,11 @@ Afps_cppCharacter::Afps_cppCharacter()
 	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
 
 	bAnimState = EAnimStateEnum::Hands;
+
+	bHealth = 1000.0f;
+
+	Tags.Add(FName("Flesh"));
+	Tags.Add(FName("Player"));
 
 	static ConstructorHelpers::FObjectFinder<UCurveFloat> Curve(TEXT("/Game/Characters/Mannequins/Animations/RecoilTrack"));
 	if (Curve.Succeeded()) 
@@ -822,7 +828,7 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 		}
-		else if (actor->ActorHasTag("Flesh"))
+		else if (actor->ActorHasTag("Player"))
 		{
 			if (HasAuthority())
 			{
@@ -851,15 +857,18 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 
 			if (bHit)
 			{
-				AActor* HitActor2 = HitResult.GetActor();
-				FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), HitActor2->GetActorLocation(), FVector(1, 1, 1));
-				if (HasAuthority())
+				FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(HitResult.Normal).Rotator(), HitResult.Location, FVector(1, 1, 1));
+				TSubclassOf<AActor> Blood = ABloodDecal::StaticClass();
+				if (Blood)
 				{
-					SpawnBulletHoleMulticast(tmpTransform2);
-				}
-				else
-				{
-					SpawnBulletHoleServer(tmpTransform2);
+					if (HasAuthority())
+					{
+						SpawnActorToMulticast(Blood, tmpTransform2, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+					}
+					else
+					{
+						SpawnActorToServer(Blood, tmpTransform2, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+					}
 				}
 			}
 
@@ -951,7 +960,7 @@ void Afps_cppCharacter::SetWeaponClass(TSubclassOf<AActor> WBase)
 void Afps_cppCharacter::SpawnActorToMulticast_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride)
 {
 	UWorld* World = GetWorld();
-	if (World && *Class)
+	if (World && Class)
 	{
 		// Actor를 Spawn합니다.
 		FActorSpawnParameters SpawnParams;
@@ -966,8 +975,6 @@ void Afps_cppCharacter::SpawnActorToServer_Implementation(TSubclassOf<AActor> Cl
 	if (HasAuthority()) {
 		SpawnActorToMulticast(Class, SpawnTransform, CollisionHandlingOverride);
 	}
-
-	
 }
 
 void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase)

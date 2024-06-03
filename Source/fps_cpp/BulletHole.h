@@ -26,7 +26,7 @@ class FPS_CPP_API ABulletHole : public AActor
 	UPROPERTY(EditAnywhere)
 	UTimelineComponent* Timeline;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	UMaterialInstanceDynamic* DynamicMaterialInstance;
 
 	UPROPERTY()

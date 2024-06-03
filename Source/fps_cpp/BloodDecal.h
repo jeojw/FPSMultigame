@@ -14,6 +14,13 @@ class FPS_CPP_API ABloodDecal : public AActor
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UDecalComponent* BloodDecal;
+
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	UMaterialInterface* BloodMaterial;
+	
+	FTimerHandle TimerHandle;
+
+	void DestroyBloodDecal();
 	
 public:	
 	// Sets default values for this actor's properties

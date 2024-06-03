@@ -10,12 +10,24 @@ ABloodDecal::ABloodDecal()
 	PrimaryActorTick.bCanEverTick = true;
 
 	BloodDecal = CreateDefaultSubobject<UDecalComponent>(TEXT("Decal"));
+
+	BloodDecal->SetRelativeScale3D(FVector(0.0475f, 0.3925f, 0.5225f));
+	static ConstructorHelpers::FObjectFinder<UMaterialInterface> DecalMaterial(TEXT("/Game/Megascans/Decals/High_Velocity_Blood_Spatter_sfjjcfzp/MI_High_Velocity_Blood_Spatter_sfjjcfzp_8K"));
+	if (DecalMaterial.Succeeded())
+	{
+		BloodMaterial = DecalMaterial.Object;
+		BloodDecal->SetDecalMaterial(BloodMaterial);
+	}
+
+	bReplicates = true;
 }
 
 // Called when the game starts or when spawned
 void ABloodDecal::BeginPlay()
 {
 	Super::BeginPlay();
+
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ABloodDecal::DestroyBloodDecal, 5.0f, false);
 	
 }
 
@@ -24,5 +36,10 @@ void ABloodDecal::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ABloodDecal::DestroyBloodDecal()
+{
+	Destroy();
 }
 
