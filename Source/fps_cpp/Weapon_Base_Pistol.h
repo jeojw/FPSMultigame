@@ -17,9 +17,13 @@ class FPS_CPP_API AWeapon_Base_Pistol : public AWeapon_Base
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+public:
+	virtual void Tick(float DeltaTime) override;
 	
 public:
 	AWeapon_Base_Pistol();
+
 
 	void PlayShotSequence();
 

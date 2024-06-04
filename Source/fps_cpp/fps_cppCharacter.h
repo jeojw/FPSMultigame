@@ -159,8 +159,14 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	FTimeline bRecoilTimeline;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	FTimeline bAimTimeline;
+
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	UCurveFloat* bRecoilCurve;
+
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	UCurveFloat* bAimCurve;
 
 	USoundCue* RifleImpactSoundCue;
 	USoundCue* RifleSurfaceImpactSoundCue;
@@ -242,7 +248,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetWeaponClass(TSubclassOf<AActor> WBase);
 
+	UFUNCTION()
 	void ControllerRecoil(float RecoilAmount);
+
+	UFUNCTION()
+	void ControlAim(float AimAlpha);
 
 	UFUNCTION()
 	void ResetFireRifle();

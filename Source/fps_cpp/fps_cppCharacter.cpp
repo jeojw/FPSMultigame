@@ -84,10 +84,16 @@ Afps_cppCharacter::Afps_cppCharacter()
 	Tags.Add(FName("Flesh"));
 	Tags.Add(FName("Player"));
 
-	static ConstructorHelpers::FObjectFinder<UCurveFloat> Curve(TEXT("/Game/Characters/Mannequins/Animations/RecoilTrack"));
-	if (Curve.Succeeded()) 
+	static ConstructorHelpers::FObjectFinder<UCurveFloat> RecoilCurve(TEXT("/Game/Characters/Mannequins/Animations/RecoilTrack"));
+	if (RecoilCurve.Succeeded()) 
 	{
-		bRecoilCurve = Curve.Object;
+		bRecoilCurve = RecoilCurve.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UCurveFloat> AimCurve(TEXT("/Game/Characters/Mannequins/Animations/AimTrack"));
+	if (AimCurve.Succeeded())
+	{
+		bAimCurve = AimCurve.Object;
 	}
 
 	static ConstructorHelpers::FClassFinder<UAnimInstance> BlueprintAnim(TEXT("/Game/Characters/Mannequins/Animations/ABP_Manny"));
@@ -157,7 +163,29 @@ void Afps_cppCharacter::BeginPlay()
 	{
 		FOnTimelineFloat RecoilProgressFunction;
 		RecoilProgressFunction.BindUFunction(this, FName("ControllerRecoil"));
+
 		bRecoilTimeline.AddInterpFloat(bRecoilCurve, RecoilProgressFunction);
+	}
+
+	if (bAimCurve)
+	{
+		FOnTimelineFloat AimProgressFunction;
+		AimProgressFunction.BindUFunction(this, FName("ControlAim"));
+
+		bAimTimeline.AddInterpFloat(bAimCurve, AimProgressFunction); 
+		bAimTimeline.SetLooping(false);
+		bAimTimeline.SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
+
+		UE_LOG(LogTemp, Log, TEXT("AimTimeline initialized with curve: %s"), *bAimCurve->GetName());
+		UFunction* Function = FindFunction(AimProgressFunction.GetFunctionName());
+		if (Function)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Function found."));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Function not found."));
+		}
 	}
 
 	if (bAnimationBlueprintRef)
@@ -179,6 +207,8 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 	GetWorldTimerManager().SetTimer(bTimerHandle_CheckWallTick, this, &Afps_cppCharacter::CheckWallTick, 0.02f, true);
 
 	bRecoilTimeline.TickTimeline(DeltaTime);
+
+	bAimTimeline.TickTimeline(DeltaTime);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -266,7 +296,7 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Fire);
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopFire);
 
-		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Aiming);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Aiming);
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopAiming);
 
 		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Reload);
@@ -373,6 +403,19 @@ void Afps_cppCharacter::ControllerRecoil(float Value)
 	ApplyRecoil(PitchValue, YawValue);
 }
 
+void Afps_cppCharacter::ControlAim(float Value)
+{
+	UE_LOG(LogTemp, Log, TEXT("ControlAim called with Value: %f"), Value);
+
+	if (CameraBoom && CameraBoom->IsValidLowLevel())
+	{
+		FVector NewLocation = FMath::Lerp(FVector(10.385671f, 1.909163f, -1.909163f), FVector(13.945591f, 1.909163f, 12.256057f), Value);
+		CameraBoom->SetRelativeLocation(NewLocation);
+
+		UE_LOG(LogTemp, Log, TEXT("CameraBoom location set to: %s"), *NewLocation.ToString());
+	}
+}
+
 void Afps_cppCharacter::ResetFireRifle()
 {
 	bFireCooldownTimer.Invalidate();
@@ -394,6 +437,7 @@ void Afps_cppCharacter::EjectShell(FVector Location, FRotator Rotation)
 		AShell_Base* ShellActor = GetWorld()->SpawnActor<AShell_Base>(AShell_Base::StaticClass(), SpawnTransform, SpawnParams);
 		if (ShellActor)
 		{
+			ShellActor->GetShell()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
 			ShellActor->GetShell()->SetSimulatePhysics(true);
 			FVector RightRandom = ShellActor->GetShell()->GetRightVector() * FMath::RandRange(int32(-2), int32(2));
 			FVector ForwardRandom = ShellActor->GetShell()->GetForwardVector() * FMath::RandRange(int32(1), int32(10));
@@ -456,25 +500,6 @@ void Afps_cppCharacter::RifleFire()
 							{
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
 								Weapon->PlayShotSequence();
-								if (HasAuthority())
-								{
-									PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
-								}
-								else
-								{
-									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), RifleImpactSoundCue);
-								}
-								bRecoilTimeline.PlayFromStart();
-
-								FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
-								if (HasAuthority())
-								{
-									SpawnEmitterAtLocationMulticast(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
-								}
-								else
-								{
-									SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
-								}
 								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
 							}
 						}
@@ -502,9 +527,9 @@ void Afps_cppCharacter::PistolFire()
 					false
 				);
 				InventoryComponent->ReduceBullet(bCurrentItemSelection);
-				if (AWeapon_Base_Pistol::StaticClass())
+				if (WeaponBase && WeaponBase->GetChildActor())
 				{
-					AWeapon_Base_Pistol* Weapon = Cast<AWeapon_Base_Pistol>(AWeapon_Base_Pistol::StaticClass());
+					AWeapon_Base_Pistol* Weapon = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
 					if (Weapon)
 					{
 						FTransform ShellTransform;
@@ -518,26 +543,7 @@ void Afps_cppCharacter::PistolFire()
 							if (F_Procedural_Recoil)
 							{
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
-								if (HasAuthority())
-								{
-									PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), PistolSurfaceImpactSoundCue);
-								}
-								else
-								{
-									PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), PistolSurfaceImpactSoundCue);
-								}
-								bRecoilTimeline.PlayFromStart();
-
-								FTransform MuzzlePoint = Weapon->GetSkeletalMeshComponent()->GetSocketTransform(FName("MuzzlePoint"));
-								if (HasAuthority())
-								{
-									SpawnEmitterAtLocationMulticast(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
-								}
-								else
-								{
-									SpawnEmitterAtLocationServer(MuzzleFlashParticleSystem, MuzzlePoint.GetLocation(), FRotator(MuzzlePoint.GetRotation()), FVector(1, 1, 1));
-								}
-								
+								Weapon->PlayShotSequence();
 								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
 							}
 						}
@@ -558,11 +564,13 @@ void Afps_cppCharacter::StopFire()
 void Afps_cppCharacter::Aiming()
 {
 	bIsAiming = true;
+	bAimTimeline.Play();
 }
 
 void Afps_cppCharacter::StopAiming()
 {
 	bIsAiming = false;
+	bAimTimeline.Reverse();
 }
 
 void Afps_cppCharacter::FireDelayCompleted()
@@ -1255,9 +1263,9 @@ void Afps_cppCharacter::IF_GetLeftHandSocketTransform_Implementation(FTransform&
 		return;
 	}
 
-	if (!GetMesh()->DoesSocketExist(FName("hand_r")))
+	if (!GetMesh()->DoesSocketExist(FName("GrapSocket")))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Socket hand_r does not exist"));
+		UE_LOG(LogTemp, Warning, TEXT("Socket GrapSocket does not exist"));
 		return;
 	}
 
