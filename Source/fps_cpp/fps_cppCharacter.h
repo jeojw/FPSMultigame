@@ -11,6 +11,11 @@
 #include "Net/UnrealNetwork.h"
 #include "PickUpBase.h"
 #include "Shell_Base.h"
+#include "InputActionValue.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "InputAction.h"
+#include "InputMappingContext.h"
 #include "ProjectileBullet.h"
 #include "Sound/SoundCue.h"
 #include "Components/TimelineComponent.h"
@@ -71,6 +76,12 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* ReloadAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SwitchAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LeanAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* DropItemAction;
@@ -288,6 +299,10 @@ public:
 
 	void DropItem();
 
+	void SwitchWeapon();
+
+	void Lean();
+
 	UFUNCTION(BlueprintCallable)
 	void EquipItem();
 
@@ -364,6 +379,12 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void WallDistanceMulticast(float WallDistance);
 
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void SetLeanLeftServer(bool LeanLeft);
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void SetLeanRightServer(bool LeanRight);
+
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform) override;
@@ -439,6 +460,11 @@ protected:
 
 	void WallDistanceMulticast_Implementation(float WallDistance);
 	void WallDistanceServer_Implementation(float WallDistance);
+
+	void SetLeanLeftServer_Implementation(bool LeanLeft);
+	bool SetLeanLeftServer_Validate(bool LeanLeft);
+	void SetLeanRightServer_Implementation(bool LeanRight);
+	bool SetLeanRightServer_Validate(bool LeanRight);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

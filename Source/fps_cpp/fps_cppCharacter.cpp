@@ -7,10 +7,8 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/Controller.h"
-#include "EnhancedInputComponent.h"
-#include "EnhancedInputSubsystems.h"
-#include "InputActionValue.h"
 #include "Math/RotationMatrix.h"
 #include "Math/Transform.h"
 #include "Kismet/GameplayStatics.h"
@@ -78,6 +76,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
 
 	bAnimState = EAnimStateEnum::Hands;
+	bCurrentItemSelection = 0;
 
 	bHealth = 1000.0f;
 
@@ -209,6 +208,8 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 	bRecoilTimeline.TickTimeline(DeltaTime);
 
 	bAimTimeline.TickTimeline(DeltaTime);
+
+	Lean();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -302,6 +303,10 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Reload);
 
 		EnhancedInputComponent->BindAction(DropItemAction, ETriggerEvent::Started, this, &Afps_cppCharacter::DropItem);
+
+		EnhancedInputComponent->BindAction(SwitchAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::SwitchWeapon);
+
+		EnhancedInputComponent->BindAction(LeanAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Lean);
 	}
 	else
 	{
@@ -685,6 +690,85 @@ void Afps_cppCharacter::DropItem()
 			InventoryComponent->GetInventory().RemoveAt(bCurrentItemSelection);
 			bCurrentItemSelection = 0;
 			EquipItem();
+		}
+	}
+}
+
+void Afps_cppCharacter::SwitchWeapon()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		if (PlayerController->IsInputKeyDown(EKeys::One))
+		{
+			bCurrentItemSelection = 0;
+			EquipItem();
+			UE_LOG(LogTemp, Warning, TEXT("Switching to Weapon 1"));
+		}
+		else if (PlayerController->IsInputKeyDown(EKeys::Two))
+		{
+			bCurrentItemSelection = 1;
+			EquipItem();
+			UE_LOG(LogTemp, Warning, TEXT("Switching to Weapon 2"));
+		}
+		else if (PlayerController->IsInputKeyDown(EKeys::Three))
+		{
+			bCurrentItemSelection = 2;
+			EquipItem();
+			UE_LOG(LogTemp, Warning, TEXT("Switching to Weapon 3"));
+		}
+	}
+}
+
+void Afps_cppCharacter::Lean()
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		if (PlayerController->IsInputKeyDown(EKeys::Q))
+		{
+			if (HasAuthority())
+			{
+				bLeanLeft = true;
+			}
+			else
+			{
+				SetLeanLeftServer(true);
+			}
+		}
+		else
+		{
+			if (HasAuthority())
+			{
+				bLeanLeft = false;
+			}
+			else
+			{
+				SetLeanLeftServer(false);
+			}
+		}
+
+		if (PlayerController->IsInputKeyDown(EKeys::E))
+		{
+			if (HasAuthority())
+			{
+				bLeanRight = true;
+			}
+			else
+			{
+				SetLeanRightServer(true);
+			}
+		}
+		else
+		{
+			if (HasAuthority())
+			{
+				bLeanRight = false;
+			}
+			else
+			{
+				SetLeanRightServer(false);
+			}
 		}
 	}
 }
@@ -1211,6 +1295,27 @@ float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 
 	return ActualDamage;
 }
+
+void Afps_cppCharacter::SetLeanLeftServer_Implementation(bool LeanLeft)
+{
+	bLeanLeft = LeanLeft;
+}
+
+bool Afps_cppCharacter::SetLeanLeftServer_Validate(bool LeanLeft)
+{
+	return true;
+}
+
+void Afps_cppCharacter::SetLeanRightServer_Implementation(bool LeanRight)
+{
+	bLeanRight = LeanRight;
+}
+
+bool Afps_cppCharacter::SetLeanRightServer_Validate(bool LeanRight)
+{
+	return true;
+}
+
 
 void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
