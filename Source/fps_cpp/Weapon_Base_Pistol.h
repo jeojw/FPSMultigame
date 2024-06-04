@@ -23,9 +23,4 @@ public:
 	
 public:
 	AWeapon_Base_Pistol();
-
-
-	void PlayShotSequence();
-
-	void PlayReloadSequence();
 };

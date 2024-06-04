@@ -504,7 +504,14 @@ void Afps_cppCharacter::RifleFire()
 							if (F_Procedural_Recoil)
 							{
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
-								Weapon->PlayShotSequence();
+								if (HasAuthority())
+								{
+									Weapon->PlayShotSequenceMulticast();
+								}
+								else
+								{
+									Weapon->PlayShotSequenceServer();
+								}
 								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
 							}
 						}
@@ -548,7 +555,14 @@ void Afps_cppCharacter::PistolFire()
 							if (F_Procedural_Recoil)
 							{
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
-								Weapon->PlayShotSequence();
+								if (HasAuthority())
+								{
+									Weapon->PlayShotSequenceMulticast();
+								}
+								else
+								{
+									Weapon->PlayShotSequenceServer();
+								}
 								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
 							}
 						}
@@ -627,13 +641,27 @@ void Afps_cppCharacter::Reload()
 				AWeapon_Base_M4* WB_M4 = Cast<AWeapon_Base_M4>(WB);
 				if (WB_M4)
 				{
-					WB_M4->PlayReloadSequence();
+					if (HasAuthority())
+					{
+						WB_M4->PlayReloadSequenceMulticast();
+					}
+					else
+					{
+						WB_M4->PlayReloadSequenceServer();
+					}
 				}
 
 				AWeapon_Base_Pistol* WB_Pistol = Cast<AWeapon_Base_Pistol>(WB);
 				if (WB_Pistol)
 				{
-					WB_Pistol->PlayReloadSequence();
+					if (HasAuthority())
+					{
+						WB_Pistol->PlayReloadSequenceMulticast();
+					}
+					else
+					{
+						WB_Pistol->PlayReloadSequenceServer();
+					}
 				}
 
 				GetWorld()->GetTimerManager().SetTimer(
@@ -694,6 +722,22 @@ void Afps_cppCharacter::DropItem()
 	}
 }
 
+void Afps_cppCharacter::SetWeaponLocationAndRotation(FVector NewLocation, FRotator NewRotation)
+{
+	if (WeaponBase && WeaponBase->GetChildActor())
+	{
+		AActor* WeaponChildActor = WeaponBase->GetChildActor();
+		if (WeaponChildActor)
+		{
+			WeaponChildActor->SetActorRelativeLocation(NewLocation);
+
+			// Log the applied rotation values
+			FRotator AppliedRotation = WeaponChildActor->GetActorRotation();
+			UE_LOG(LogTemp, Warning, TEXT("SetWeaponLocationAndRotation - Applied Rotation - Pitch: %f, Yaw: %f, Roll: %f"), AppliedRotation.Pitch, AppliedRotation.Yaw, AppliedRotation.Roll);
+		}
+	}
+}
+
 void Afps_cppCharacter::SwitchWeapon()
 {
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
@@ -703,19 +747,16 @@ void Afps_cppCharacter::SwitchWeapon()
 		{
 			bCurrentItemSelection = 0;
 			EquipItem();
-			UE_LOG(LogTemp, Warning, TEXT("Switching to Weapon 1"));
 		}
 		else if (PlayerController->IsInputKeyDown(EKeys::Two))
 		{
 			bCurrentItemSelection = 1;
 			EquipItem();
-			UE_LOG(LogTemp, Warning, TEXT("Switching to Weapon 2"));
 		}
 		else if (PlayerController->IsInputKeyDown(EKeys::Three))
 		{
 			bCurrentItemSelection = 2;
 			EquipItem();
-			UE_LOG(LogTemp, Warning, TEXT("Switching to Weapon 3"));
 		}
 	}
 }
@@ -729,7 +770,7 @@ void Afps_cppCharacter::Lean()
 		{
 			if (HasAuthority())
 			{
-				bLeanLeft = true;
+				SetLeanLeftMulticast(true);
 			}
 			else
 			{
@@ -740,7 +781,7 @@ void Afps_cppCharacter::Lean()
 		{
 			if (HasAuthority())
 			{
-				bLeanLeft = false;
+				SetLeanLeftMulticast(false);
 			}
 			else
 			{
@@ -752,7 +793,7 @@ void Afps_cppCharacter::Lean()
 		{
 			if (HasAuthority())
 			{
-				bLeanRight = true;
+				SetLeanRightMulticast(true);
 			}
 			else
 			{
@@ -763,7 +804,7 @@ void Afps_cppCharacter::Lean()
 		{
 			if (HasAuthority())
 			{
-				bLeanRight = false;
+				SetLeanRightMulticast(false);
 			}
 			else
 			{
@@ -1252,7 +1293,6 @@ void Afps_cppCharacter::SpawnBulletHoleServer_Implementation(FTransform SpawnTra
 	{
 		SpawnBulletHoleMulticast(SpawnTransform);
 	}
-	
 }
 
 bool Afps_cppCharacter::SpawnBulletHoleServer_Validate(FTransform SpawnTransform)
@@ -1296,9 +1336,17 @@ float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 	return ActualDamage;
 }
 
-void Afps_cppCharacter::SetLeanLeftServer_Implementation(bool LeanLeft)
+void Afps_cppCharacter::SetLeanLeftMulticast_Implementation(bool LeanLeft)
 {
 	bLeanLeft = LeanLeft;
+}
+
+void Afps_cppCharacter::SetLeanLeftServer_Implementation(bool LeanLeft)
+{
+	if (HasAuthority())
+	{
+		SetLeanLeftMulticast(LeanLeft);
+	}
 }
 
 bool Afps_cppCharacter::SetLeanLeftServer_Validate(bool LeanLeft)
@@ -1306,9 +1354,17 @@ bool Afps_cppCharacter::SetLeanLeftServer_Validate(bool LeanLeft)
 	return true;
 }
 
-void Afps_cppCharacter::SetLeanRightServer_Implementation(bool LeanRight)
+void Afps_cppCharacter::SetLeanRightMulticast_Implementation(bool LeanRight)
 {
 	bLeanRight = LeanRight;
+}
+
+void Afps_cppCharacter::SetLeanRightServer_Implementation(bool LeanRight)
+{
+	if (HasAuthority())
+	{
+		SetLeanRightMulticast(LeanRight);
+	}
 }
 
 bool Afps_cppCharacter::SetLeanRightServer_Validate(bool LeanRight)

@@ -54,7 +54,21 @@ public:
 	UFUNCTION()
 	void UpdateAimOffset(FVector NewLocation);
 
-	void PlayShotSequence();
+	UFUNCTION(NetMulticast, Reliable)
+	void PlayShotSequenceMulticast();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void PlayShotSequenceServer();
 
-	void PlayReloadSequence();
+	UFUNCTION(NetMulticast, Reliable)
+	void PlayReloadSequenceMulticast();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void PlayReloadSequenceServer();
+
+	void PlayShotSequenceMulticast_Implementation();
+	void PlayShotSequenceServer_Implementation();
+	bool PlayShotSequenceServer_Validate();
+
+	void PlayReloadSequenceMulticast_Implementation();
+	void PlayReloadSequenceServer_Implementation();
+	bool PlayReloadSequenceServer_Validate();
 };

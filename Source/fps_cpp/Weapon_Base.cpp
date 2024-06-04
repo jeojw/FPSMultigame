@@ -10,6 +10,9 @@ AWeapon_Base::AWeapon_Base()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	USceneComponent* DefaultSceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("DefaultSceneRoot"));
+	RootComponent = DefaultSceneRoot;
+
 	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
 	SkeletalMesh->SetupAttachment(RootComponent);
 
@@ -82,12 +85,42 @@ void AWeapon_Base::UpdateAimOffset(FVector NewLocation)
 	}
 }
 
-void AWeapon_Base::PlayShotSequence()
+void AWeapon_Base::PlayShotSequenceMulticast_Implementation()
 {
-
+	if (ShotSequence && SkeletalMesh)
+	{
+		SkeletalMesh->PlayAnimation(ShotSequence, false);
+	}
 }
 
-void AWeapon_Base::PlayReloadSequence()
+void AWeapon_Base::PlayShotSequenceServer_Implementation()
 {
+	if (HasAuthority())
+	{
+		PlayShotSequenceMulticast();
+	}
+}
+bool AWeapon_Base::PlayShotSequenceServer_Validate()
+{
+	return true;
+}
 
+void AWeapon_Base::PlayReloadSequenceMulticast_Implementation()
+{
+	if (ReloadSequence && SkeletalMesh)
+	{
+		SkeletalMesh->PlayAnimation(ReloadSequence, false);
+	}
+}
+
+void AWeapon_Base::PlayReloadSequenceServer_Implementation()
+{
+	if (HasAuthority())
+	{
+		PlayReloadSequenceMulticast();
+	}
+}
+bool AWeapon_Base::PlayReloadSequenceServer_Validate()
+{
+	return true;
 }

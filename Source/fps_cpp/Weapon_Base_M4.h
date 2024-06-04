@@ -20,8 +20,4 @@ protected:
 
 public:
 	AWeapon_Base_M4();
-
-	void PlayShotSequence();
-
-	void PlayReloadSequence();
 };

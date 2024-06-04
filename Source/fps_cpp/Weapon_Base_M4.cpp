@@ -32,21 +32,3 @@ void AWeapon_Base_M4::BeginPlay()
 		ReloadSequence = Cast<UAnimSequence>(StaticLoadObject(UAnimSequence::StaticClass(), nullptr, TEXT("/Game/MilitaryWeapSilver/Weapons/Animations/Prone_Reload_Rifle_W")));
 	}
 }
-
-void AWeapon_Base_M4::PlayShotSequence()
-{
-	Super::PlayShotSequence();
-	if (ShotSequence && SkeletalMesh)
-	{
-		SkeletalMesh->PlayAnimation(ShotSequence, false);
-	}
-}
-
-void AWeapon_Base_M4::PlayReloadSequence()
-{
-	Super::PlayReloadSequence();
-	if (ShotSequence && SkeletalMesh)
-	{
-		SkeletalMesh->PlayAnimation(ReloadSequence, false);
-	}
-}

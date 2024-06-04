@@ -271,6 +271,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void EjectShell(FVector Location, FRotator Rotation);
 
+	void SetWeaponLocationAndRotation(FVector NewLocation, FRotator NewRotation);
+
 
 public:
 	/** Called for movement input */
@@ -379,9 +381,13 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void WallDistanceMulticast(float WallDistance);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void SetLeanLeftMulticast(bool LeanLeft);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetLeanLeftServer(bool LeanLeft);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void SetLeanRightMulticast(bool LeanRight);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetLeanRightServer(bool LeanRight);
 
@@ -461,8 +467,11 @@ protected:
 	void WallDistanceMulticast_Implementation(float WallDistance);
 	void WallDistanceServer_Implementation(float WallDistance);
 
+	void SetLeanLeftMulticast_Implementation(bool LeanLeft);
 	void SetLeanLeftServer_Implementation(bool LeanLeft);
 	bool SetLeanLeftServer_Validate(bool LeanLeft);
+
+	void SetLeanRightMulticast_Implementation(bool LeanRight);
 	void SetLeanRightServer_Implementation(bool LeanRight);
 	bool SetLeanRightServer_Validate(bool LeanRight);
 
