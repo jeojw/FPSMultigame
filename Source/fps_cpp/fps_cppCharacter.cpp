@@ -20,8 +20,6 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Weapon_Base_Pistol.h"
 #include "Weapon_Base_M4.h"
-#include "../../../../Program Files/Epic Games/UE_5.4/Engine/Plugins/Experimental/Avalanche/Source/AvalancheEditor/Private/MaterialDesigner/AvaMaterialDesignerTextureAssetFactory.h"
-#include "../../../../Program Files/Epic Games/UE_5.4/Engine/Plugins/Enterprise/DatasmithImporter/Source/DatasmithImporter/Public/ActorFactoryDatasmithScene.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -310,21 +308,16 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 	if (EnhancedInputComponent != nullptr) {
 		
-		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
-		// Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Move);
 
-		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Look);
 
-		// Sprinting
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Sprint);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopSprint);
 
-		// Fire
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Fire);
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopFire);
 
@@ -805,7 +798,7 @@ void Afps_cppCharacter::Lean()
 		{
 			if (HasAuthority())
 			{
-				SetLeanLeftMulticast(true);
+				bLeanLeft = true;
 			}
 			else
 			{
@@ -816,7 +809,7 @@ void Afps_cppCharacter::Lean()
 		{
 			if (HasAuthority())
 			{
-				SetLeanLeftMulticast(false);
+				bLeanLeft = false;
 			}
 			else
 			{
@@ -828,7 +821,7 @@ void Afps_cppCharacter::Lean()
 		{
 			if (HasAuthority())
 			{
-				SetLeanRightMulticast(true);
+				bLeanRight = true;
 			}
 			else
 			{
@@ -839,7 +832,7 @@ void Afps_cppCharacter::Lean()
 		{
 			if (HasAuthority())
 			{
-				SetLeanRightMulticast(false);
+				bLeanRight = false;
 			}
 			else
 			{
@@ -1371,16 +1364,12 @@ float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 	return ActualDamage;
 }
 
-void Afps_cppCharacter::SetLeanLeftMulticast_Implementation(bool LeanLeft)
-{
-	bLeanLeft = LeanLeft;
-}
-
 void Afps_cppCharacter::SetLeanLeftServer_Implementation(bool LeanLeft)
 {
 	if (HasAuthority())
 	{
-		SetLeanLeftMulticast(LeanLeft);
+		bLeanLeft = LeanLeft;
+		Multicast_SetLeanBooleans(bLeanLeft, bLeanRight);
 	}
 }
 
@@ -1389,16 +1378,13 @@ bool Afps_cppCharacter::SetLeanLeftServer_Validate(bool LeanLeft)
 	return true;
 }
 
-void Afps_cppCharacter::SetLeanRightMulticast_Implementation(bool LeanRight)
-{
-	bLeanRight = LeanRight;
-}
 
 void Afps_cppCharacter::SetLeanRightServer_Implementation(bool LeanRight)
 {
 	if (HasAuthority())
 	{
-		SetLeanRightMulticast(LeanRight);
+		bLeanRight = LeanRight;
+		Multicast_SetLeanBooleans(bLeanLeft, bLeanRight);
 	}
 }
 
@@ -1406,6 +1392,12 @@ bool Afps_cppCharacter::SetLeanRightServer_Validate(bool LeanRight)
 {
 	return true;
 }
+void Afps_cppCharacter::Multicast_SetLeanBooleans_Implementation(bool Left, bool Right)
+{
+	bLeanLeft = Left;
+	bLeanRight = Right;
+}
+
 
 void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum WeaponType)
 {
@@ -1471,7 +1463,6 @@ void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(Afps_cppCharacter, bAnimState);
 
 	DOREPLIFETIME(Afps_cppCharacter, bLeanLeft);
-
 	DOREPLIFETIME(Afps_cppCharacter, bLeanRight);
 
 	DOREPLIFETIME(Afps_cppCharacter, bHealth);

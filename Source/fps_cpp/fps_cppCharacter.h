@@ -381,13 +381,9 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void WallDistanceMulticast(float WallDistance);
 
-	UFUNCTION(NetMulticast, Reliable)
-	void SetLeanLeftMulticast(bool LeanLeft);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetLeanLeftServer(bool LeanLeft);
 
-	UFUNCTION(NetMulticast, Reliable)
-	void SetLeanRightMulticast(bool LeanRight);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetLeanRightServer(bool LeanRight);
 
@@ -400,6 +396,9 @@ public:
 	void PlayReloadSequenceMulticast(EItemTypeEnum WeaponType);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void PlayReloadSequenceServer(EItemTypeEnum WeaponType);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SetLeanBooleans(bool Left, bool Right);
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
@@ -415,6 +414,7 @@ public:
 	virtual void IF_GetAimAlpha_Implementation(float& A) override;
 	virtual void IF_GetLeanBooleans_Implementation(bool& Left, bool& Right) override;
 	virtual void IF_ReceiveProjectileImpact_Implementation(AActor* HitActor, UActorComponent* HitComponent, const FVector HitLocation, const FVector NormalPoint) override;
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -479,13 +479,13 @@ protected:
 	void WallDistanceMulticast_Implementation(float WallDistance);
 	void WallDistanceServer_Implementation(float WallDistance);
 
-	void SetLeanLeftMulticast_Implementation(bool LeanLeft);
 	void SetLeanLeftServer_Implementation(bool LeanLeft);
 	bool SetLeanLeftServer_Validate(bool LeanLeft);
 
-	void SetLeanRightMulticast_Implementation(bool LeanRight);
 	void SetLeanRightServer_Implementation(bool LeanRight);
 	bool SetLeanRightServer_Validate(bool LeanRight);
+
+	void Multicast_SetLeanBooleans_Implementation(bool Left, bool Right);
 
 	void PlayShotSequenceMulticast_Implementation(EItemTypeEnum WeaponType);
 	void PlayShotSequenceServer_Implementation(EItemTypeEnum WeaponType);

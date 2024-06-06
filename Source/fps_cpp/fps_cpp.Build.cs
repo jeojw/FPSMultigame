@@ -4,17 +4,11 @@ using UnrealBuildTool;
 
 public class fps_cpp : ModuleRules
 {
-	public fps_cpp(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+    public fps_cpp(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "NetCore", "UMG"});
-
-        PublicDependencyModuleNames.AddRange(new string[] {
-            "OnlineSubsystem",
-            "OnlineSubsystemUtils",
-            "Landscape",
-            "Steamworks"
-        });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "NetCore", 
+            "UMG", "OnlineSubsystem", "OnlineSubsystemUtils", "Landscape", "Steamworks" });
     }
 }

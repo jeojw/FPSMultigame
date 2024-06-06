@@ -24,9 +24,6 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<APawn> PlayerPawnBPClass;
-
-	UFUNCTION()
-	void SpawnActor(APlayerController* PlayerController);
 };
 
 
