@@ -200,6 +200,8 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 public:
 	Afps_cppCharacter();
 
+	int GetHealth() const { return bHealth; }
+
 	bool GetIsAttacking() const { return bIsAttacking; }
 	void SetIsAttacking(bool NewValue) { bIsAttacking = NewValue; }
 
@@ -255,6 +257,8 @@ public:
 
 	FTransform GetLeftHandSocketTransform() const { return bLeftHandSocketTransform; }
 	void SetLeftHandSocketTransoform(FTransform LeftHandSocketTransform) { bLeftHandSocketTransform = LeftHandSocketTransform; }
+
+	UInventory* GetInventory() const { return InventoryComponent; }
 
 	UFUNCTION(BlueprintCallable)
 	void SetWeaponClass(TSubclassOf<AActor> WBase);
@@ -398,7 +402,9 @@ public:
 	void PlayReloadSequenceServer(EItemTypeEnum WeaponType);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_SetLeanBooleans(bool Left, bool Right);
+	void Multicast_SetLeanLeftBooleans(bool Left);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SetLeanRightBooleans(bool Right);
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
@@ -485,7 +491,8 @@ protected:
 	void SetLeanRightServer_Implementation(bool LeanRight);
 	bool SetLeanRightServer_Validate(bool LeanRight);
 
-	void Multicast_SetLeanBooleans_Implementation(bool Left, bool Right);
+	void Multicast_SetLeanLeftBooleans_Implementation(bool Left);
+	void Multicast_SetLeanRightBooleans_Implementation(bool Right);
 
 	void PlayShotSequenceMulticast_Implementation(EItemTypeEnum WeaponType);
 	void PlayShotSequenceServer_Implementation(EItemTypeEnum WeaponType);

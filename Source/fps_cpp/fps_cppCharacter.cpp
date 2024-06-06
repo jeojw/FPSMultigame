@@ -78,7 +78,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bAnimState = EAnimStateEnum::Hands;
 	bCurrentItemSelection = 0;
 
-	bHealth = 1000.0f;
+	bHealth = 200.0f;
 
 	Tags.Add(FName("Flesh"));
 	Tags.Add(FName("Player"));
@@ -1369,7 +1369,7 @@ void Afps_cppCharacter::SetLeanLeftServer_Implementation(bool LeanLeft)
 	if (HasAuthority())
 	{
 		bLeanLeft = LeanLeft;
-		Multicast_SetLeanBooleans(bLeanLeft, bLeanRight);
+		Multicast_SetLeanLeftBooleans(bLeanLeft);
 	}
 }
 
@@ -1384,7 +1384,7 @@ void Afps_cppCharacter::SetLeanRightServer_Implementation(bool LeanRight)
 	if (HasAuthority())
 	{
 		bLeanRight = LeanRight;
-		Multicast_SetLeanBooleans(bLeanLeft, bLeanRight);
+		Multicast_SetLeanRightBooleans(bLeanRight);
 	}
 }
 
@@ -1392,9 +1392,13 @@ bool Afps_cppCharacter::SetLeanRightServer_Validate(bool LeanRight)
 {
 	return true;
 }
-void Afps_cppCharacter::Multicast_SetLeanBooleans_Implementation(bool Left, bool Right)
+void Afps_cppCharacter::Multicast_SetLeanLeftBooleans_Implementation(bool Left)
 {
 	bLeanLeft = Left;
+}
+
+void Afps_cppCharacter::Multicast_SetLeanRightBooleans_Implementation(bool Right)
+{
 	bLeanRight = Right;
 }
 
