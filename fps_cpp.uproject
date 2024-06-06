@@ -21,6 +21,11 @@
 			"TargetAllowList": [
 				"Editor"
 			]
+		},
+		{
+			"Name": "MultiplayerFPS",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/061176d2d7b34d289510d98672dddc2a"
 		}
 	]
 }

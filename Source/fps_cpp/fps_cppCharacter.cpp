@@ -884,7 +884,7 @@ void Afps_cppCharacter::EquipItem()
 							SetStatsToServer(data->Stats);
 							SetAnimStateServer(data->AnimState);
 						}
-						
+						SetWeaponIcon(data->icon);
 						SetCurrentStats(data->Stats);
 						SetCurrentReloadAnimation(data->ReloadAnimation);
 						SetCurrentWeaponClass(data->WeaponClass);

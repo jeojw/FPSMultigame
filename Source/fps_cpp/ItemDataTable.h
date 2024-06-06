@@ -9,6 +9,7 @@
 #include "PickUpBase.h"
 #include "WeaponStatsStruct.h"
 #include "AnimStateEnum.h"
+#include "PaperSprite.h"
 #include "ItemDataTable.generated.h"
 
 /**
@@ -24,7 +25,7 @@ public:
     FName Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    UTexture2D* icon;
+    UPaperSprite* icon;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     EItemTypeEnum Type;

@@ -19,6 +19,7 @@
 #include "ProjectileBullet.h"
 #include "Sound/SoundCue.h"
 #include "Components/TimelineComponent.h"
+#include "PaperSprite.h"
 #include "fps_cppCharacter.generated.h"
 
 
@@ -149,6 +150,9 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	EItemTypeEnum bWeaponType;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPaperSprite* WeaponIcon;
+
 	UPROPERTY(BlueprintAssignable)
 	FAnimStateChangedEvent OnAnimStateChanged;
 
@@ -259,6 +263,9 @@ public:
 	void SetLeftHandSocketTransoform(FTransform LeftHandSocketTransform) { bLeftHandSocketTransform = LeftHandSocketTransform; }
 
 	UInventory* GetInventory() const { return InventoryComponent; }
+
+	UPaperSprite* GetWeaponIcon() const { return WeaponIcon; }
+	void SetWeaponIcon(UPaperSprite* NewIcon) { WeaponIcon = NewIcon; }
 
 	UFUNCTION(BlueprintCallable)
 	void SetWeaponClass(TSubclassOf<AActor> WBase);

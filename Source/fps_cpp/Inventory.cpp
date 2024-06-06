@@ -35,7 +35,6 @@ void UInventory::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompo
 
 	// ...
 }
-
 int UInventory::GetCurBullet(int current) const
 {
 	return Inventory[current].Bullets;

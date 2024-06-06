@@ -9,6 +9,6 @@ public class fps_cpp : ModuleRules
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "NetCore", 
-            "UMG", "OnlineSubsystem", "OnlineSubsystemUtils", "Landscape", "Steamworks" });
+            "UMG", "OnlineSubsystem", "OnlineSubsystemUtils", "Landscape", "Steamworks", "Paper2D", "Slate", "SlateCore" });
     }
 }

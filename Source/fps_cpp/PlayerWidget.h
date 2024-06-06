@@ -9,6 +9,17 @@
 #include "Components/Image.h"
 #include "Components/CanvasPanel.h"
 #include "Components/TextBlock.h"
+#include "Engine/Texture2D.h"
+#include "PaperSprite.h"
+#include "PaperSpriteComponent.h"
+#include "ImageUtils.h"
+#include "IImageWrapperModule.h"
+#include "IImageWrapper.h"
+#include "IImageWrapperModule.h"
+#include "Misc/FileHelper.h"
+#include "HAL/PlatformFilemanager.h"
+#include "Modules/ModuleManager.h"
+#include "../../../../Program Files/Epic Games/UE_5.4/Engine/Plugins/2D/Paper2D/Source/Paper2DEditor/Private/Atlasing/PaperAtlasTextureHelpers.h"
 #include "PlayerWidget.generated.h"
 
 /**
@@ -32,15 +43,16 @@ class FPS_CPP_API UPlayerWidget : public UUserWidget
 	UImage* CurWeaponImage;
 
 	UPROPERTY(meta = (BindWidget))
-	UImage* CurPistolImage_1;
-	UPROPERTY(meta = (BindWidget))
-	UImage* CurPistolImage_2;
+	UImage* CurBulletImage;
 
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* CurPistolCounts;
+	UTextBlock* CurBulletCounts;
 
 	UPROPERTY()
 	Afps_cppCharacter* Player;
+
+	UPROPERTY()
+	UPaperSprite* CurWeaponIcon;
 
 	int CurItemSelection;
 	int PlayerHealth;
@@ -50,4 +62,9 @@ class FPS_CPP_API UPlayerWidget : public UUserWidget
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
+public:
+	void SetWeaponImage(UPaperSprite* NewSprite);
+	UTexture2D* ConvertSpriteToTexture(UPaperSprite* Sprite);
+	void SetImageBrushFromTexture(UImage* ImageWidget, UTexture2D* Texture);
 };
