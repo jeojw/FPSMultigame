@@ -3,7 +3,7 @@
 
 #include "Weapon_Base_M4.h"
 
-AWeapon_Base_M4::AWeapon_Base_M4() : Super()
+AWeapon_Base_M4::AWeapon_Base_M4() : AWeapon_Base()
 {
 	// Using static ConstructorHelpers to find animations during BeginPlay
 	static ConstructorHelpers::FObjectFinder<UAnimSequence> ShotSequenceFinder(TEXT("/Game/MilitaryWeapSilver/Weapons/Animations/Fire_Rifle_W"));
@@ -16,19 +16,5 @@ AWeapon_Base_M4::AWeapon_Base_M4() : Super()
 	if (ReloadSequenceFinder.Succeeded())
 	{
 		ReloadSequence = ReloadSequenceFinder.Object;
-	}
-}
-
-void AWeapon_Base_M4::BeginPlay()
-{
-	Super::BeginPlay();
-
-	if (!ShotSequence)
-	{
-		ShotSequence = Cast<UAnimSequence>(StaticLoadObject(UAnimSequence::StaticClass(), nullptr, TEXT("/Game/MilitaryWeapSilver/Weapons/Animations/Fire_Rifle_W")));
-	}
-	if (!ReloadSequence)
-	{
-		ReloadSequence = Cast<UAnimSequence>(StaticLoadObject(UAnimSequence::StaticClass(), nullptr, TEXT("/Game/MilitaryWeapSilver/Weapons/Animations/Prone_Reload_Rifle_W")));
 	}
 }

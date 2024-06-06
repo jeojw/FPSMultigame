@@ -21,6 +21,12 @@ protected:
 
 private:
 	void InitializeNetworkSettings();
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<APawn> PlayerPawnBPClass;
+
+	UFUNCTION()
+	void SpawnActor(APlayerController* PlayerController);
 };
 
 

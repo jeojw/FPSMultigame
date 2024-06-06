@@ -20,6 +20,8 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Weapon_Base_Pistol.h"
 #include "Weapon_Base_M4.h"
+#include "../../../../Program Files/Epic Games/UE_5.4/Engine/Plugins/Experimental/Avalanche/Source/AvalancheEditor/Private/MaterialDesigner/AvaMaterialDesignerTextureAssetFactory.h"
+#include "../../../../Program Files/Epic Games/UE_5.4/Engine/Plugins/Enterprise/DatasmithImporter/Source/DatasmithImporter/Public/ActorFactoryDatasmithScene.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -142,14 +144,32 @@ Afps_cppCharacter::Afps_cppCharacter()
 void Afps_cppCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+}
 
-	// Initialize the PlayerInterface
-	PlayerInterface.SetInterface(Cast<IPlayerInterface>(this));
-	PlayerInterface.SetObject(this);
+void Afps_cppCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
 
-	if (!PlayerInterface.GetObject() || !PlayerInterface.GetInterface())
+	// 소유권 설정
+	if (APlayerController* PC = Cast<APlayerController>(NewController))
 	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to initialize PlayerInterface"));
+		SetOwner(PC);
+
+		APlayerController* PlayerController = Cast<APlayerController>(GetController());
+		if (PlayerController)
+		{
+			UE_LOG(LogTemp, Log, TEXT("BeginPlay: Character controlled by PlayerController"));
+			SetOwner(PlayerController);
+
+			// Initialize the PlayerInterface
+			PlayerInterface.SetInterface(Cast<IPlayerInterface>(this));
+			PlayerInterface.SetObject(this);
+
+			if (!PlayerInterface.GetObject() || !PlayerInterface.GetInterface())
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to initialize PlayerInterface"));
+			}
+		}
 	}
 }
 
@@ -157,6 +177,17 @@ void Afps_cppCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		UE_LOG(LogTemp, Log, TEXT("BeginPlay: Character controlled by PlayerController"));
+		SetOwner(PlayerController);
+
+		// Initialize the PlayerInterface
+		PlayerInterface.SetInterface(Cast<IPlayerInterface>(this));
+		PlayerInterface.SetObject(this);
+	}
 
 	if (bRecoilCurve)
 	{
@@ -493,6 +524,10 @@ void Afps_cppCharacter::RifleFire()
 					AWeapon_Base_M4* Weapon = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
 					if (Weapon)
 					{
+						if (!Weapon->GetIsReplicated())
+						{
+							Weapon->SetReplicates(true);
+						}
 						FTransform ShellTransform;
 						IGunInterface::Execute_GetShellTransform(Weapon, ShellTransform);
 						EjectShell(ShellTransform.GetLocation(), FRotator(ShellTransform.GetRotation()));
@@ -506,11 +541,11 @@ void Afps_cppCharacter::RifleFire()
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
-									Weapon->PlayShotSequenceMulticast();
+									PlayShotSequenceMulticast(EItemTypeEnum::Rifle);
 								}
 								else
 								{
-									Weapon->PlayShotSequenceServer();
+									PlayShotSequenceServer(EItemTypeEnum::Rifle);
 								}
 								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
 							}
@@ -557,11 +592,11 @@ void Afps_cppCharacter::PistolFire()
 								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
-									Weapon->PlayShotSequenceMulticast();
+									PlayShotSequenceMulticast(EItemTypeEnum::Pistol);
 								}
 								else
 								{
-									Weapon->PlayShotSequenceServer();
+									PlayShotSequenceServer(EItemTypeEnum::Pistol);
 								}
 								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
 							}
@@ -643,11 +678,11 @@ void Afps_cppCharacter::Reload()
 				{
 					if (HasAuthority())
 					{
-						WB_M4->PlayReloadSequenceMulticast();
+						PlayReloadSequenceMulticast(EItemTypeEnum::Rifle);
 					}
 					else
 					{
-						WB_M4->PlayReloadSequenceServer();
+						PlayReloadSequenceServer(EItemTypeEnum::Rifle);
 					}
 				}
 
@@ -656,11 +691,11 @@ void Afps_cppCharacter::Reload()
 				{
 					if (HasAuthority())
 					{
-						WB_Pistol->PlayReloadSequenceMulticast();
+						PlayReloadSequenceMulticast(EItemTypeEnum::Pistol);
 					}
 					else
 					{
-						WB_Pistol->PlayReloadSequenceServer();
+						PlayReloadSequenceServer(EItemTypeEnum::Pistol);
 					}
 				}
 
@@ -1372,6 +1407,59 @@ bool Afps_cppCharacter::SetLeanRightServer_Validate(bool LeanRight)
 	return true;
 }
 
+void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum WeaponType)
+{
+	if (WeaponType == EItemTypeEnum::Rifle)
+	{
+		AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
+		M4->GetSkeletalMeshComponent()->PlayAnimation(M4->GetShotSequence(), false);
+	}
+	else if (WeaponType == EItemTypeEnum::Pistol)
+	{
+		AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
+		Pistol->GetSkeletalMeshComponent()->PlayAnimation(Pistol->GetShotSequence(), false);
+	}
+}
+
+void Afps_cppCharacter::PlayShotSequenceServer_Implementation(EItemTypeEnum WeaponType)
+{
+	if (HasAuthority())
+	{
+		PlayShotSequenceMulticast(WeaponType);
+	}
+}
+
+bool Afps_cppCharacter::PlayShotSequenceServer_Validate(EItemTypeEnum WeaponType)
+{
+	return true;
+}
+
+void Afps_cppCharacter::PlayReloadSequenceMulticast_Implementation(EItemTypeEnum WeaponType)
+{
+	if (WeaponType == EItemTypeEnum::Rifle)
+	{
+		AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
+		M4->GetSkeletalMeshComponent()->PlayAnimation(M4->GetReloadSequence(), false);
+	}
+	else if (WeaponType == EItemTypeEnum::Pistol)
+	{
+		AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
+		Pistol->GetSkeletalMeshComponent()->PlayAnimation(Pistol->GetReloadSequence(), false);
+	}
+}
+
+void Afps_cppCharacter::PlayReloadSequenceServer_Implementation(EItemTypeEnum WeaponType)
+{
+	if (HasAuthority())
+	{
+		PlayReloadSequenceMulticast(WeaponType);
+	}
+}
+
+bool Afps_cppCharacter::PlayReloadSequenceServer_Validate(EItemTypeEnum WeaponType)
+{
+	return true;
+}
 
 void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {

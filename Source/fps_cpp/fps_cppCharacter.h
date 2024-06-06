@@ -391,6 +391,16 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetLeanRightServer(bool LeanRight);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void PlayShotSequenceMulticast(EItemTypeEnum WeaponType);
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void PlayShotSequenceServer(EItemTypeEnum WeaponType);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void PlayReloadSequenceMulticast(EItemTypeEnum WeaponType);
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void PlayReloadSequenceServer(EItemTypeEnum WeaponType);
+
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform) override;
@@ -411,6 +421,8 @@ protected:
 	
 	// To add mapping context
 	virtual void BeginPlay() override;
+
+	virtual void PossessedBy(AController* NewController) override;
 
 	virtual void PostInitializeComponents() override;
 
@@ -474,6 +486,14 @@ protected:
 	void SetLeanRightMulticast_Implementation(bool LeanRight);
 	void SetLeanRightServer_Implementation(bool LeanRight);
 	bool SetLeanRightServer_Validate(bool LeanRight);
+
+	void PlayShotSequenceMulticast_Implementation(EItemTypeEnum WeaponType);
+	void PlayShotSequenceServer_Implementation(EItemTypeEnum WeaponType);
+	bool PlayShotSequenceServer_Validate(EItemTypeEnum WeaponType);
+
+	void PlayReloadSequenceMulticast_Implementation(EItemTypeEnum WeaponType);
+	void PlayReloadSequenceServer_Implementation(EItemTypeEnum WeaponType);
+	bool PlayReloadSequenceServer_Validate(EItemTypeEnum WeaponType);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

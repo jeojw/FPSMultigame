@@ -4,6 +4,7 @@
 #include "fps_cppCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerState.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
@@ -11,10 +12,11 @@
 Afps_cppGameMode::Afps_cppGameMode()
 {
 	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
-	if (PlayerPawnBPClass.Class != NULL)
+	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
+	if (PlayerPawnBPClassFinder.Class != NULL)
 	{
-		DefaultPawnClass = PlayerPawnBPClass.Class;
+		PlayerPawnBPClass = PlayerPawnBPClassFinder.Class;
+		DefaultPawnClass = PlayerPawnBPClass;
 	}
 }
 

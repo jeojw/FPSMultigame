@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "GunInterface.h"
+#include "Net/UnrealNetwork.h"
 #include "Weapon_Base.generated.h"
 
 UCLASS()
@@ -30,6 +31,7 @@ protected:
 
 	UPROPERTY(EditAnywhere)
 	UAnimSequence* ReloadSequence;
+
 	
 public:	
 	// Sets default values for this actor's properties
@@ -49,26 +51,11 @@ public:
 	USkeletalMeshComponent* GetMesh() const { return SkeletalMesh; }
 	void SetMesh(USkeletalMeshComponent* _mesh) { SkeletalMesh = _mesh; }
 
-	virtual void GetShellTransform_Implementation(FTransform& T) override;
+	UAnimSequence* GetShotSequence() const { return ShotSequence; }
+	UAnimSequence* GetReloadSequence() const { return ReloadSequence; }
+
+	void GetShellTransform_Implementation(FTransform& T);
 
 	UFUNCTION()
 	void UpdateAimOffset(FVector NewLocation);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void PlayShotSequenceMulticast();
-	UFUNCTION(Server, Reliable, WithValidation)
-	void PlayShotSequenceServer();
-
-	UFUNCTION(NetMulticast, Reliable)
-	void PlayReloadSequenceMulticast();
-	UFUNCTION(Server, Reliable, WithValidation)
-	void PlayReloadSequenceServer();
-
-	void PlayShotSequenceMulticast_Implementation();
-	void PlayShotSequenceServer_Implementation();
-	bool PlayShotSequenceServer_Validate();
-
-	void PlayReloadSequenceMulticast_Implementation();
-	void PlayReloadSequenceServer_Implementation();
-	bool PlayReloadSequenceServer_Validate();
 };
