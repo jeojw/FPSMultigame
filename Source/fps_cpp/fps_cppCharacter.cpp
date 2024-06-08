@@ -265,7 +265,7 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 
 	Lean();
 
-	if (!FMath::IsNearlyZero(GetVelocity().Size()))
+	if (!FMath::IsNearlyZero(GetVelocity().Size()) && !bIsDead)
 	{
 		if (!bJumping)
 		{
@@ -274,11 +274,11 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 				GetWorld()->GetTimerManager().ClearTimer(RunTimerHandle);
 				if (HasAuthority())
 				{
-					PlaySoundAtLocationMulticast(GetActorLocation(), MetalWalkSoundCue, 1.0f);
+					PlaySoundWithCooldownMulticast(GetActorLocation(), MetalWalkSoundCue, 1.0f);
 				}
 				else
 				{
-					PlaySoundAtLocationServer(GetActorLocation(), MetalWalkSoundCue, 1.0f);
+					PlaySoundWithCooldownServer(GetActorLocation(), MetalWalkSoundCue, 1.0f);
 				}
 			}
 			else
@@ -286,11 +286,13 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 				GetWorld()->GetTimerManager().ClearTimer(WalkTimerHandle);
 				if (HasAuthority())
 				{
-					PlaySoundAtLocationMulticast(GetActorLocation(), MetalRunSoundCue, 0.3f);
+					UE_LOG(LogTemp, Warning, TEXT("Server: Running sound triggered"));
+					PlaySoundWithCooldownMulticast(GetActorLocation(), MetalRunSoundCue, 0.3f);
 				}
 				else
 				{
-					PlaySoundAtLocationServer(GetActorLocation(), MetalRunSoundCue, 0.3f);
+					UE_LOG(LogTemp, Warning, TEXT("Client: Running sound request sent to server"));
+					PlaySoundWithCooldownServer(GetActorLocation(), MetalRunSoundCue, 0.3f);
 				}
 			}
 		}			
@@ -404,104 +406,126 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 void Afps_cppCharacter::Jump()
 {
-	Super::Jump();
-	bJumping = true;
+	if (!bIsDead)
+	{
+		Super::Jump();
+		bJumping = true;
 
-	if (HasAuthority())
-	{
-		PlaySoundAtLocationMulticast(GetActorLocation(), MetalJumpSoundCue, 0.0f);
+		if (HasAuthority())
+		{
+			PlaySoundAtLocationMulticast(GetActorLocation(), MetalJumpSoundCue);
+		}
+		else
+		{
+			PlaySoundAtLocationServer(GetActorLocation(), MetalJumpSoundCue);
+		}
 	}
-	else
-	{
-		PlaySoundAtLocationServer(GetActorLocation(), MetalJumpSoundCue, 0.0f);
-	}
+	
 }
 void Afps_cppCharacter::StopJumping()
 {
-	Super::StopJumping();
+	if (!bIsDead)
+		Super::StopJumping();
 }
 
 void Afps_cppCharacter::Landed(const FHitResult& Hit)
 {
-	Super::Landed(Hit);
-	bJumping = false;
-	if (HasAuthority())
+	if (!bIsDead)
 	{
-		PlaySoundAtLocationMulticast(GetActorLocation(), MetalLandSoundCue, 0.0f);
-	}
-	else
-	{
-		PlaySoundAtLocationServer(GetActorLocation(), MetalLandSoundCue, 0.0f);
+		Super::Landed(Hit);
+		bJumping = false;
+		if (HasAuthority())
+		{
+			PlaySoundAtLocationMulticast(GetActorLocation(), MetalLandSoundCue);
+		}
+		else
+		{
+			PlaySoundAtLocationServer(GetActorLocation(), MetalLandSoundCue);
+		}
 	}
 }
 
 void Afps_cppCharacter::Move(const FInputActionValue& Value)
 {
-	// input is a Vector2D
-	FVector2D MovementVector = Value.Get<FVector2D>();
-
-	if (Controller != nullptr)
+	if (!bIsDead)
 	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		// input is a Vector2D
+		FVector2D MovementVector = Value.Get<FVector2D>();
 
-		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		if (Controller != nullptr)
+		{
+			// find out which way is forward
+			const FRotator Rotation = Controller->GetControlRotation();
+			const FRotator YawRotation(0, Rotation.Yaw, 0);
 
-		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+			// get forward vector
+			const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 
-		// add movement 
-		AddMovementInput(ForwardDirection, MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
+			// get right vector 
+			const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+			// add movement 
+			AddMovementInput(ForwardDirection, MovementVector.Y);
+			AddMovementInput(RightDirection, MovementVector.X);
+		}
 	}
 }
 
 void Afps_cppCharacter::Look(const FInputActionValue& Value)
 {
-	// input is a Vector2D
-	FVector2D LookAxisVector = Value.Get<FVector2D>();
-
-	if (Controller != nullptr)
+	if (!bIsDead)
 	{
-		// add yaw and pitch input to controller
-		AddControllerYawInput(LookAxisVector.X);
-		AddControllerPitchInput(LookAxisVector.Y);
+		// input is a Vector2D
+		FVector2D LookAxisVector = Value.Get<FVector2D>();
+
+		if (Controller != nullptr)
+		{
+			// add yaw and pitch input to controller
+			AddControllerYawInput(LookAxisVector.X);
+			AddControllerPitchInput(LookAxisVector.Y);
+		}
 	}
 }
 
 void Afps_cppCharacter::Sprint()
 {
-	bSprinting = true;
-
-	if (HasAuthority())
+	if (!bIsDead)
 	{
-		if (GetCharacterMovement())
+		bSprinting = true;
+
+		if (HasAuthority())
 		{
-			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+			if (GetCharacterMovement())
+			{
+				GetCharacterMovement()->MaxWalkSpeed = 600.0f;
+			}
+		}
+		else
+		{
+			SprintServer(600.0f);
 		}
 	}
 	else
-	{
-		SprintServer(600.0f);
-	}
+		bSprinting = false;
 }
 
 void Afps_cppCharacter::StopSprint()
 {
-	bSprinting = false;
+	if (!bIsDead)
+	{
+		bSprinting = false;
 
-	if (HasAuthority())
-	{
-		if (GetCharacterMovement())
+		if (HasAuthority())
 		{
-			GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+			if (GetCharacterMovement())
+			{
+				GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+			}
 		}
-	}
-	else
-	{
-		SprintServer(100.0f);
+		else
+		{
+			SprintServer(100.0f);
+		}
 	}
 }
 
@@ -535,15 +559,17 @@ void Afps_cppCharacter::ControllerRecoil(float Value)
 
 void Afps_cppCharacter::ControlAim(float Value)
 {
-	UE_LOG(LogTemp, Log, TEXT("ControlAim called with Value: %f"), Value);
-
-	if (CameraBoom && CameraBoom->IsValidLowLevel())
+	if (!bIsDead)
 	{
-		FVector NewLocation = FMath::Lerp(FVector(10.385671f, 1.909163f, -1.909163f), FVector(13.945591f, 1.909163f, 12.256057f), Value);
-		CameraBoom->SetRelativeLocation(NewLocation);
+		if (CameraBoom && CameraBoom->IsValidLowLevel())
+		{
+			FVector NewLocation = FMath::Lerp(FVector(10.385671f, 1.909163f, -1.909163f), FVector(13.945591f, 1.909163f, 12.256057f), Value);
+			CameraBoom->SetRelativeLocation(NewLocation);
 
-		UE_LOG(LogTemp, Log, TEXT("CameraBoom location set to: %s"), *NewLocation.ToString());
+			UE_LOG(LogTemp, Log, TEXT("CameraBoom location set to: %s"), *NewLocation.ToString());
+		}
 	}
+	
 }
 
 void Afps_cppCharacter::ResetFireRifle()
@@ -580,21 +606,26 @@ void Afps_cppCharacter::EjectShell(FVector Location, FRotator Rotation)
 
 void Afps_cppCharacter::Fire()
 {
-	bIsAttacking = true;
-
-	switch (bWeaponType)
+	if (!bIsDead)
 	{
-	case EItemTypeEnum::Pistol:
-		PistolFire();
-		break;
+		bIsAttacking = true;
 
-	case EItemTypeEnum::Rifle:
-		RifleFire();
-		break;
+		switch (bWeaponType)
+		{
+		case EItemTypeEnum::Pistol:
+			PistolFire();
+			break;
 
-	default:
-		break;
+		case EItemTypeEnum::Rifle:
+			RifleFire();
+			break;
+
+		default:
+			break;
+		}
 	}
+	else
+		bIsAttacking = false;
 }
 
 void Afps_cppCharacter::RifleFire()
@@ -711,8 +742,13 @@ void Afps_cppCharacter::StopFire()
 
 void Afps_cppCharacter::Aiming()
 {
-	bIsAiming = true;
-	bAimTimeline.Play();
+	if (!bIsDead)
+	{
+		bIsAiming = true;
+		bAimTimeline.Play();
+	}
+	else
+		bIsAiming = false;
 }
 
 void Afps_cppCharacter::StopAiming()
@@ -737,116 +773,122 @@ void Afps_cppCharacter::ReloadDelayCompleted()
 
 void Afps_cppCharacter::Reload()
 {
-	if (!InventoryComponent) {
-		UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
-		return;
-	}
-	if (InventoryComponent->GetInventory()[bCurrentItemSelection].Bullets < bCurrentStats.MagSize)
+	if (!bIsDead)
 	{
-		bIsAiming = false;
-		bIsAttacking = false;
-		if (HasAuthority())
-		{
-			StopLeftHandIKMulticast(true);
+		if (!InventoryComponent) {
+			UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
+			return;
 		}
-		else
+		if (InventoryComponent->GetInventory()[bCurrentItemSelection].Bullets < bCurrentStats.MagSize)
 		{
-			StopLeftHandIKServer(true);
-		}
-		if (WeaponBase && WeaponBase->GetChildActor())
-		{
-			AWeapon_Base* WB = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
-			if (bCurrentReloadAnimation)
+			bIsAiming = false;
+			bIsAttacking = false;
+			if (HasAuthority())
 			{
-				if (HasAuthority())
-				{
-					PlayAnimMontageMulticast(bCurrentReloadAnimation);
-				}
-				else
-				{
-					PlayAnimMontageServer(bCurrentReloadAnimation);
-				}
-
-				AWeapon_Base_M4* WB_M4 = Cast<AWeapon_Base_M4>(WB);
-				if (WB_M4)
-				{
-					if (HasAuthority())
-					{
-						PlayReloadSequenceMulticast(EItemTypeEnum::Rifle);
-					}
-					else
-					{
-						PlayReloadSequenceServer(EItemTypeEnum::Rifle);
-					}
-				}
-
-				AWeapon_Base_Pistol* WB_Pistol = Cast<AWeapon_Base_Pistol>(WB);
-				if (WB_Pistol)
-				{
-					if (HasAuthority())
-					{
-						PlayReloadSequenceMulticast(EItemTypeEnum::Pistol);
-					}
-					else
-					{
-						PlayReloadSequenceServer(EItemTypeEnum::Pistol);
-					}
-				}
-
-				GetWorld()->GetTimerManager().SetTimer(
-					bFireCooldownTimer,
-					this,
-					&Afps_cppCharacter::ReloadDelayCompleted,
-					bCurrentStats.ReloadTime,
-					false
-				);
-
-				if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
-				{
-					InventoryComponent->ReloadBullet(bCurrentItemSelection, bCurrentStats);
-					if (HasAuthority())
-					{
-						StopLeftHandIKMulticast(false);
-					}
-					else
-					{
-						StopLeftHandIKServer(false);
-					}
-				}
+				StopLeftHandIKMulticast(true);
 			}
-			
-		}	
+			else
+			{
+				StopLeftHandIKServer(true);
+			}
+			if (WeaponBase && WeaponBase->GetChildActor())
+			{
+				AWeapon_Base* WB = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
+				if (bCurrentReloadAnimation)
+				{
+					if (HasAuthority())
+					{
+						PlayAnimMontageMulticast(bCurrentReloadAnimation);
+					}
+					else
+					{
+						PlayAnimMontageServer(bCurrentReloadAnimation);
+					}
+
+					AWeapon_Base_M4* WB_M4 = Cast<AWeapon_Base_M4>(WB);
+					if (WB_M4)
+					{
+						if (HasAuthority())
+						{
+							PlayReloadSequenceMulticast(EItemTypeEnum::Rifle);
+						}
+						else
+						{
+							PlayReloadSequenceServer(EItemTypeEnum::Rifle);
+						}
+					}
+
+					AWeapon_Base_Pistol* WB_Pistol = Cast<AWeapon_Base_Pistol>(WB);
+					if (WB_Pistol)
+					{
+						if (HasAuthority())
+						{
+							PlayReloadSequenceMulticast(EItemTypeEnum::Pistol);
+						}
+						else
+						{
+							PlayReloadSequenceServer(EItemTypeEnum::Pistol);
+						}
+					}
+
+					GetWorld()->GetTimerManager().SetTimer(
+						bFireCooldownTimer,
+						this,
+						&Afps_cppCharacter::ReloadDelayCompleted,
+						bCurrentStats.ReloadTime,
+						false
+					);
+
+					if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
+					{
+						InventoryComponent->ReloadBullet(bCurrentItemSelection, bCurrentStats);
+						if (HasAuthority())
+						{
+							StopLeftHandIKMulticast(false);
+						}
+						else
+						{
+							StopLeftHandIKServer(false);
+						}
+					}
+				}
+
+			}
+		}
 	}
 }
 
 void Afps_cppCharacter::DropItem()
 {
-	if (!InventoryComponent) {
-		UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
-		return;
-	}
-	if (InventoryComponent->GetInventory()[bCurrentItemSelection].ID > 0)
+	if (!bIsDead)
 	{
-		if (InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
+		if (!InventoryComponent) {
+			UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
+			return;
+		}
+		if (InventoryComponent->GetInventory()[bCurrentItemSelection].ID > 0)
 		{
-			FDynamicInventoryItem Item = InventoryComponent->GetInventory()[bCurrentItemSelection];
-			FVector ForwardCameraLocation = FollowCamera->GetComponentLocation() + (FollowCamera->GetForwardVector() * 200.0);
+			if (InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
+			{
+				FDynamicInventoryItem Item = InventoryComponent->GetInventory()[bCurrentItemSelection];
+				FVector ForwardCameraLocation = FollowCamera->GetComponentLocation() + (FollowCamera->GetForwardVector() * 200.0);
 
-			FTransform SpawnTransform;
-			SpawnTransform.SetLocation(ForwardCameraLocation);
-			SpawnTransform.SetRotation(FQuat(FRotator(0, 0, 0)));
-			SpawnTransform.SetScale3D(FVector(1, 1, 1));
-			if (HasAuthority())
-			{
-				SpawnPickupActorMulticast(SpawnTransform, ESpawnActorCollisionHandlingMethod::Undefined, Item, bCurrentWeaponPickUpClass);
+				FTransform SpawnTransform;
+				SpawnTransform.SetLocation(ForwardCameraLocation);
+				SpawnTransform.SetRotation(FQuat(FRotator(0, 0, 0)));
+				SpawnTransform.SetScale3D(FVector(1, 1, 1));
+				if (HasAuthority())
+				{
+					SpawnPickupActorMulticast(SpawnTransform, ESpawnActorCollisionHandlingMethod::Undefined, Item, bCurrentWeaponPickUpClass);
+				}
+				else
+				{
+					SpawnPickupActorServer(SpawnTransform, ESpawnActorCollisionHandlingMethod::Undefined, Item, bCurrentWeaponPickUpClass);
+				}
+				InventoryComponent->GetInventory().RemoveAt(bCurrentItemSelection);
+				bCurrentItemSelection = 0;
+				EquipItem();
 			}
-			else
-			{
-				SpawnPickupActorServer(SpawnTransform, ESpawnActorCollisionHandlingMethod::Undefined, Item, bCurrentWeaponPickUpClass);
-			}
-			InventoryComponent->GetInventory().RemoveAt(bCurrentItemSelection);
-			bCurrentItemSelection = 0;
-			EquipItem();
 		}
 	}
 }
@@ -869,139 +911,153 @@ void Afps_cppCharacter::SetWeaponLocationAndRotation(FVector NewLocation, FRotat
 
 void Afps_cppCharacter::SwitchWeapon()
 {
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	if (PlayerController)
+	if (!bIsDead)
 	{
-		if (PlayerController->IsInputKeyDown(EKeys::One))
+		APlayerController* PlayerController = Cast<APlayerController>(GetController());
+		if (PlayerController)
 		{
-			bCurrentItemSelection = 0;
-			EquipItem();
-		}
-		else if (PlayerController->IsInputKeyDown(EKeys::Two))
-		{
-			bCurrentItemSelection = 1;
-			EquipItem();
-		}
-		else if (PlayerController->IsInputKeyDown(EKeys::Three))
-		{
-			bCurrentItemSelection = 2;
-			EquipItem();
+			if (PlayerController->IsInputKeyDown(EKeys::One))
+			{
+				bCurrentItemSelection = 0;
+				EquipItem();
+			}
+			else if (PlayerController->IsInputKeyDown(EKeys::Two))
+			{
+				bCurrentItemSelection = 1;
+				EquipItem();
+			}
+			else if (PlayerController->IsInputKeyDown(EKeys::Three))
+			{
+				bCurrentItemSelection = 2;
+				EquipItem();
+			}
 		}
 	}
 }
 
 void Afps_cppCharacter::Lean()
 {
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	if (PlayerController)
+	if (!bIsDead)
 	{
-		if (PlayerController->IsInputKeyDown(EKeys::Q))
+		APlayerController* PlayerController = Cast<APlayerController>(GetController());
+		if (PlayerController)
 		{
-			if (HasAuthority())
+			if (PlayerController->IsInputKeyDown(EKeys::Q))
 			{
-				bLeanLeft = true;
+				if (HasAuthority())
+				{
+					bLeanLeft = true;
+				}
+				else
+				{
+					SetLeanLeftServer(true);
+				}
 			}
 			else
 			{
-				SetLeanLeftServer(true);
+				if (HasAuthority())
+				{
+					bLeanLeft = false;
+				}
+				else
+				{
+					SetLeanLeftServer(false);
+				}
 			}
-		}
-		else
-		{
-			if (HasAuthority())
-			{
-				bLeanLeft = false;
-			}
-			else
-			{
-				SetLeanLeftServer(false);
-			}
-		}
 
-		if (PlayerController->IsInputKeyDown(EKeys::E))
-		{
-			if (HasAuthority())
+			if (PlayerController->IsInputKeyDown(EKeys::E))
 			{
-				bLeanRight = true;
+				if (HasAuthority())
+				{
+					bLeanRight = true;
+				}
+				else
+				{
+					SetLeanRightServer(true);
+				}
 			}
 			else
 			{
-				SetLeanRightServer(true);
+				if (HasAuthority())
+				{
+					bLeanRight = false;
+				}
+				else
+				{
+					SetLeanRightServer(false);
+				}
 			}
 		}
-		else
-		{
-			if (HasAuthority())
-			{
-				bLeanRight = false;
-			}
-			else
-			{
-				SetLeanRightServer(false);
-			}
-		}
+	}
+	else
+	{
+		bLeanLeft = false;
+		bLeanRight = false;
 	}
 }
 
 void Afps_cppCharacter::EquipItem()
 {
-	if (IsLocallyControlled()) {
-		if (!InventoryComponent) {
-			UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
-			return;
-		}
+	if (!bIsDead)
+	{
+		if (IsLocallyControlled()) {
+			if (!InventoryComponent) {
+				UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
+				return;
+			}
 
-		if (!PlayerInterface) {
-			UE_LOG(LogTemp, Error, TEXT("PlayerInterface is null"));
-			return;
-		}
+			if (!PlayerInterface) {
+				UE_LOG(LogTemp, Error, TEXT("PlayerInterface is null"));
+				return;
+			}
 
-		int CurrentSelection = bCurrentItemSelection;
-		if (!InventoryComponent->GetInventory().IsValidIndex(CurrentSelection)) {
-			UE_LOG(LogTemp, Error, TEXT("Invalid inventory index: %d"), CurrentSelection);
-			return;
-		}
+			int CurrentSelection = bCurrentItemSelection;
+			if (!InventoryComponent->GetInventory().IsValidIndex(CurrentSelection)) {
+				UE_LOG(LogTemp, Error, TEXT("Invalid inventory index: %d"), CurrentSelection);
+				return;
+			}
 
-		int id = InventoryComponent->GetInventory()[CurrentSelection].ID;
-		FString fname = FString::FromInt(id);
-		DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/DT_ItemData"));
-		if (DT_ItemData) {
-			TArray<FName> RowNames = DT_ItemData->GetRowNames();
-			for (int i = 0; i < RowNames.Num(); i++) {
-				if (RowNames[i] == fname)
-				{
-					FItemDataTable* data = DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString());
-					if (data)
+			int id = InventoryComponent->GetInventory()[CurrentSelection].ID;
+			FString fname = FString::FromInt(id);
+			DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/DT_ItemData"));
+			if (DT_ItemData) {
+				TArray<FName> RowNames = DT_ItemData->GetRowNames();
+				for (int i = 0; i < RowNames.Num(); i++) {
+					if (RowNames[i] == fname)
 					{
-						if (HasAuthority())
+						FItemDataTable* data = DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString());
+						if (data)
 						{
-							SetWeaponClassMulticast(data->WeaponClass);
-							SetStatsToMulticast(data->Stats);
-							SetAnimStateMulticast(data->AnimState);
+							if (HasAuthority())
+							{
+								SetWeaponClassMulticast(data->WeaponClass);
+								SetStatsToMulticast(data->Stats);
+								SetAnimStateMulticast(data->AnimState);
+							}
+							else
+							{
+								SetWeaponClassServer(data->WeaponClass);
+								SetStatsToServer(data->Stats);
+								SetAnimStateServer(data->AnimState);
+							}
+							SetWeaponIcon(data->icon);
+							SetCurrentStats(data->Stats);
+							SetCurrentReloadAnimation(data->ReloadAnimation);
+							SetCurrentWeaponClass(data->WeaponClass);
+							SetWeaponType(data->Type);
 						}
 						else
 						{
-							SetWeaponClassServer(data->WeaponClass);
-							SetStatsToServer(data->Stats);
-							SetAnimStateServer(data->AnimState);
+							UE_LOG(LogTemp, Error, TEXT("Failed to find data for item %s"), *fname);
 						}
-						SetWeaponIcon(data->icon);
-						SetCurrentStats(data->Stats);
-						SetCurrentReloadAnimation(data->ReloadAnimation);
-						SetCurrentWeaponClass(data->WeaponClass);
-						SetWeaponType(data->Type);
+						break;
 					}
-					else
-					{
-						UE_LOG(LogTemp, Error, TEXT("Failed to find data for item %s"), *fname);
-					}
-					break;
 				}
 			}
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to load item data table"));
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to load item data table"));
+			}
 		}
 	}
 }
@@ -1114,12 +1170,12 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 		{
 			if (HasAuthority())
 			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 			else
 			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 		}
@@ -1127,12 +1183,12 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 		{
 			if (HasAuthority())
 			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationMulticast(StoneImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 			else
 			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationServer(StoneImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 		}
@@ -1140,12 +1196,12 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 		{
 			if (HasAuthority())
 			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 			else
 			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
 				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 
@@ -1218,52 +1274,49 @@ bool Afps_cppCharacter::SprintServer_Validate(float MaxWalkSpeed)
 	return true;
 }
 
-void Afps_cppCharacter::PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound, float Delay)
+void Afps_cppCharacter::PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound)
 {
 	if (GetWorld())
 	{
-		if (!FMath::IsNearlyZero(Delay))
+		UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
+	}
+}
+
+void Afps_cppCharacter::PlaySoundWithCooldownServer_Implementation(FVector Location, USoundBase* Sound, float Delay)
+{
+	PlaySoundWithCooldownMulticast(Location, Sound, Delay);
+}
+
+void Afps_cppCharacter::PlaySoundWithCooldownMulticast_Implementation(FVector Location, USoundBase* Sound, float Delay)
+{
+	if (GetWorld())
+	{
+		FTimerHandle& TimerHandle = (GetCharacterMovement()->MaxWalkSpeed < 600.0f) ? WalkTimerHandle : RunTimerHandle;
+		// TimerHandle 초기화
+		if (!TimerHandle.IsValid())
 		{
-			PlaySoundWithCooldown(Location, Sound, Delay);
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateLambda([this, &TimerHandle]()
+				{
+					// 타이머가 만료되었을 때 사운드 재생 상태를 false로 설정
+					if (TimerHandle.IsValid())
+					{
+						bSoundPlaying = false;
+					}
+				}), Delay, true);
+
+			// 사운드 재생
 		}
-		else
+		if (!bSoundPlaying)
 		{
+			bSoundPlaying = true;
 			UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
 		}
 	}
 }
 
-void Afps_cppCharacter::PlaySoundWithCooldown(FVector Location, USoundBase* Sound, float Delay)
+void Afps_cppCharacter::PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound)
 {
-	FTimerHandle& TimerHandle = (GetCharacterMovement()->MaxWalkSpeed < 600.0f) ? WalkTimerHandle : RunTimerHandle;
-
-	// TimerHandle 초기화
-	if (!TimerHandle.IsValid())
-	{
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateLambda([this, &TimerHandle]()
-			{
-				// 타이머가 만료되었을 때 사운드 재생 상태를 false로 설정
-				if (TimerHandle.IsValid())
-				{
-					bSoundPlaying = false;
-				}
-			}), Delay, true);
-
-		// 사운드 재생
-	}
-	if (!bSoundPlaying)
-	{
-		bSoundPlaying = true;
-		UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
-	}
-}
-
-void Afps_cppCharacter::PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound, float Delay)
-{
-	if (HasAuthority()) {
-		PlaySoundAtLocationMulticast(Location, Sound, Delay);
-	}
-	
+	PlaySoundAtLocationMulticast(Location, Sound);	
 }
 
 void Afps_cppCharacter::SpawnEmitterAtLocationMulticast_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale)
@@ -1277,22 +1330,17 @@ void Afps_cppCharacter::SpawnEmitterAtLocationMulticast_Implementation(UParticle
 
 void Afps_cppCharacter::SpawnEmitterAtLocationServer_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale)
 {
-	if (HasAuthority()) {
-		SpawnEmitterAtLocationMulticast(EmitterTemplate, Location, Rotation, Scale);
-	}
-	
+	SpawnEmitterAtLocationMulticast(EmitterTemplate, Location, Rotation, Scale);
 }
 
 void Afps_cppCharacter::SetWeaponClass(TSubclassOf<AActor> WBase)
 {
 	if (HasAuthority())
 	{
-		// 서버 권한이 있는 경우 직접 멀티캐스트 함수를 호출합니다.
 		SetWeaponClassMulticast(WBase);
 	}
 	else
 	{
-		// 클라이언트가 서버에 요청을 보냅니다.
 		SetWeaponClassServer(WBase);
 	}
 }
@@ -1312,9 +1360,7 @@ void Afps_cppCharacter::SpawnActorToMulticast_Implementation(TSubclassOf<AActor>
 }
 void Afps_cppCharacter::SpawnActorToServer_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride)
 {
-	if (HasAuthority()) {
-		SpawnActorToMulticast(Class, SpawnTransform, CollisionHandlingOverride);
-	}
+	SpawnActorToMulticast(Class, SpawnTransform, CollisionHandlingOverride);
 }
 
 void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase)
@@ -1327,10 +1373,7 @@ void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActo
 
 void Afps_cppCharacter::SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase)
 {
-	if (HasAuthority()) {
-		SetWeaponClassMulticast(WBase);
-	}
-	
+	SetWeaponClassMulticast(WBase);
 }
 
 bool Afps_cppCharacter::SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase)
@@ -1346,10 +1389,7 @@ void Afps_cppCharacter::StopLeftHandIKMulticast_Implementation(bool StopLeftHand
 
 void Afps_cppCharacter::StopLeftHandIKServer_Implementation(bool StopLeftHandIK)
 {
-	if (HasAuthority()) {
-		StopLeftHandIKMulticast(StopLeftHandIK);
-	}
-	
+	StopLeftHandIKMulticast(StopLeftHandIK);
 }
 
 
@@ -1365,9 +1405,7 @@ void Afps_cppCharacter::SetAnimStateMulticast_Implementation(EAnimStateEnum Anim
 
 void Afps_cppCharacter::SetAnimStateServer_Implementation(EAnimStateEnum AnimState)
 {
-	if (HasAuthority()) {
-		SetAnimStateMulticast(AnimState);
-	}
+	SetAnimStateMulticast(AnimState);
 }
 	
 
@@ -1383,10 +1421,7 @@ void Afps_cppCharacter::SetStatsToMulticast_Implementation(FWeaponStatsStruct Cu
 
 void Afps_cppCharacter::SetStatsToServer_Implementation(FWeaponStatsStruct CurrentStats)
 {
-	if (HasAuthority()) {
-		SetStatsToMulticast(CurrentStats);
-	}
-	
+	SetStatsToMulticast(CurrentStats);
 }
 
 bool Afps_cppCharacter::SetStatsToServer_Validate(FWeaponStatsStruct CurrentStats)
@@ -1401,9 +1436,7 @@ void Afps_cppCharacter::PlayAnimMontageMulticast_Implementation(UAnimMontage* An
 
 void Afps_cppCharacter::PlayAnimMontageServer_Implementation(UAnimMontage* AnimMontage) 
 {
-	if (HasAuthority()) {
-		PlayAnimMontageMulticast(AnimMontage);
-	}
+	PlayAnimMontageMulticast(AnimMontage);
 }
 
 bool Afps_cppCharacter::PlayAnimMontageServer_Validate(UAnimMontage* AnimMontage)
@@ -1429,10 +1462,7 @@ void Afps_cppCharacter::SpawnPickupActorMulticast_Implementation(FTransform Spaw
 
 void Afps_cppCharacter::SpawnPickupActorServer_Implementation(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class)
 {
-	if (HasAuthority())
-	{
-		SpawnPickupActorMulticast(SpawnTransform, CollisionHandlingOverride, Item, Class);
-	}	
+	SpawnPickupActorMulticast(SpawnTransform, CollisionHandlingOverride, Item, Class);
 }
 
 bool Afps_cppCharacter::SpawnPickupActorServer_Validate(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class)
@@ -1450,10 +1480,7 @@ void Afps_cppCharacter::SpawnBulletHoleMulticast_Implementation(FTransform Spawn
 
 void Afps_cppCharacter::SpawnBulletHoleServer_Implementation(FTransform SpawnTransform)
 {
-	if (HasAuthority())
-	{
-		SpawnBulletHoleMulticast(SpawnTransform);
-	}
+	SpawnBulletHoleMulticast(SpawnTransform);
 }
 
 bool Afps_cppCharacter::SpawnBulletHoleServer_Validate(FTransform SpawnTransform)
@@ -1472,11 +1499,7 @@ void Afps_cppCharacter::WallDistanceMulticast_Implementation(float WallDistance)
 }
 void Afps_cppCharacter::WallDistanceServer_Implementation(float WallDistance)
 {
-	if (HasAuthority()) 
-	{
-		WallDistanceMulticast(WallDistance);
-	}
-	
+	WallDistanceMulticast(WallDistance);
 }
 
 float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -1490,7 +1513,7 @@ float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 		bHealth = FMath::Max(bHealth, 0.0f);
 		if (bHealth <= 0.0f)
 		{
-			Destroy();
+			bIsDead = true;
 		}
 	}
 
@@ -1499,11 +1522,8 @@ float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
 
 void Afps_cppCharacter::SetLeanLeftServer_Implementation(bool LeanLeft)
 {
-	if (HasAuthority())
-	{
-		bLeanLeft = LeanLeft;
-		Multicast_SetLeanLeftBooleans(bLeanLeft);
-	}
+	bLeanLeft = LeanLeft;
+	Multicast_SetLeanLeftBooleans(bLeanLeft);
 }
 
 bool Afps_cppCharacter::SetLeanLeftServer_Validate(bool LeanLeft)
@@ -1514,25 +1534,34 @@ bool Afps_cppCharacter::SetLeanLeftServer_Validate(bool LeanLeft)
 
 void Afps_cppCharacter::SetLeanRightServer_Implementation(bool LeanRight)
 {
-	if (HasAuthority())
-	{
-		bLeanRight = LeanRight;
-		Multicast_SetLeanRightBooleans(bLeanRight);
-	}
+	bLeanRight = LeanRight;
+	Multicast_SetLeanRightBooleans(bLeanRight);
 }
 
 bool Afps_cppCharacter::SetLeanRightServer_Validate(bool LeanRight)
 {
 	return true;
 }
+
+void Afps_cppCharacter::OnRep_LeanLeft()
+{
+	
+}
+void Afps_cppCharacter::OnRep_LeanRight()
+{
+	
+}
+
 void Afps_cppCharacter::Multicast_SetLeanLeftBooleans_Implementation(bool Left)
 {
 	bLeanLeft = Left;
+	OnRep_LeanLeft();
 }
 
 void Afps_cppCharacter::Multicast_SetLeanRightBooleans_Implementation(bool Right)
 {
 	bLeanRight = Right;
+	OnRep_LeanRight();
 }
 
 
@@ -1552,10 +1581,7 @@ void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum W
 
 void Afps_cppCharacter::PlayShotSequenceServer_Implementation(EItemTypeEnum WeaponType)
 {
-	if (HasAuthority())
-	{
-		PlayShotSequenceMulticast(WeaponType);
-	}
+	PlayShotSequenceMulticast(WeaponType);
 }
 
 bool Afps_cppCharacter::PlayShotSequenceServer_Validate(EItemTypeEnum WeaponType)
@@ -1579,10 +1605,7 @@ void Afps_cppCharacter::PlayReloadSequenceMulticast_Implementation(EItemTypeEnum
 
 void Afps_cppCharacter::PlayReloadSequenceServer_Implementation(EItemTypeEnum WeaponType)
 {
-	if (HasAuthority())
-	{
-		PlayReloadSequenceMulticast(WeaponType);
-	}
+	PlayReloadSequenceMulticast(WeaponType);
 }
 
 bool Afps_cppCharacter::PlayReloadSequenceServer_Validate(EItemTypeEnum WeaponType)
@@ -1594,7 +1617,6 @@ void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	// CurrentWeaponClass를 네트워크에서 복제되도록 설정
 	DOREPLIFETIME(Afps_cppCharacter, bCurrentWeaponClass);
 
 	DOREPLIFETIME(Afps_cppCharacter, bAnimState);
@@ -1603,6 +1625,9 @@ void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(Afps_cppCharacter, bLeanRight);
 
 	DOREPLIFETIME(Afps_cppCharacter, bHealth);
+	DOREPLIFETIME(Afps_cppCharacter, bIsDead);
+
+	DOREPLIFETIME(Afps_cppCharacter, bSoundPlaying);
 }
 
 void Afps_cppCharacter::IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform)
