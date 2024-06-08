@@ -265,6 +265,11 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 
 	Lean();
 
+	if (bIsDead)
+	{
+		DestroyWeapon();
+	}
+
 	if (!FMath::IsNearlyZero(GetVelocity().Size()) && !bIsDead)
 	{
 		if (!bJumping)
@@ -891,6 +896,19 @@ void Afps_cppCharacter::DropItem()
 			}
 		}
 	}
+}
+
+void Afps_cppCharacter::DestroyWeapon()
+{
+	if (HasAuthority())
+	{
+		StopLeftHandIKMulticast(true);
+	}
+	else
+	{
+		StopLeftHandIKServer(true);
+	}
+	WeaponBase->DestroyChildActor();
 }
 
 void Afps_cppCharacter::SetWeaponLocationAndRotation(FVector NewLocation, FRotator NewRotation)

@@ -230,6 +230,9 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 public:
 	Afps_cppCharacter();
 
+	bool GetIsDead() const { return bIsDead; }
+	void SetIsDead(bool IsDead) { bIsDead = IsDead; }
+
 	int GetHealth() const { return bHealth; }
 
 	bool GetIsAttacking() const { return bIsAttacking; }
@@ -310,6 +313,8 @@ public:
 
 	void SetWeaponLocationAndRotation(FVector NewLocation, FRotator NewRotation);
 
+	UFUNCTION()
+	void DestroyWeapon();
 
 public:
 	/** Called for movement input */

@@ -48,12 +48,19 @@ class FPS_CPP_API UPlayerWidget : public UUserWidget
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* CurBulletCounts;
 
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* DeathMessage;
+
+	UPROPERTY(meta = (BindWidget))
+	UProgressBar* RespawnBar;
+
 	UPROPERTY()
 	Afps_cppCharacter* Player;
 
 	UPROPERTY()
 	UPaperSprite* CurWeaponIcon;
 
+	int RespawnProgress;
 	int CurItemSelection;
 	int PlayerHealth;
 	EItemTypeEnum CurItem;

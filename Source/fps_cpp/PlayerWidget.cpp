@@ -20,6 +20,9 @@ void UPlayerWidget::NativeConstruct()
     CurPistols = Player->GetInventory()->GetCurBullet(CurItemSelection);
     CurWeaponIcon = LoadObject<UPaperSprite>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/Weapons/Weapon_Icons/Weapon_Icon_WeaponIcon_12"));
 
+    DeathMessage->SetVisibility(ESlateVisibility::Hidden);
+    RespawnBar->SetVisibility(ESlateVisibility::Hidden);
+
     if (HpBar)
     {
         HpBar->SetPercent(1.0f);  // HP 바를 100%로 초기화
@@ -49,6 +52,17 @@ void UPlayerWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
         if (HpBar)
         {
             HpBar->SetPercent(FMath::Clamp(PlayerHealth / 100.0f, 0.0f, 1.0f));
+        }
+
+        if (Player->GetIsDead())
+        {
+            DeathMessage->SetVisibility(ESlateVisibility::Visible);
+            RespawnBar->SetVisibility(ESlateVisibility::Visible);
+        }
+        else 
+        {
+            DeathMessage->SetVisibility(ESlateVisibility::Hidden);
+            RespawnBar->SetVisibility(ESlateVisibility::Hidden);
         }
     }
 }
