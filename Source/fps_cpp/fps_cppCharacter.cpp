@@ -69,9 +69,13 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bReplicates = true;
 	bAlwaysRelevant = true;
 
+	bSprinting = false;
+	bSoundPlaying = false;
 	bIsAiming = false;
 	bStopLeftHandIK = false;
 	bIsAttacking = false;
+
+	GetCharacterMovement()->MaxWalkSpeed = 100.0f;
 
 	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
 
@@ -136,6 +140,27 @@ Afps_cppCharacter::Afps_cppCharacter()
 	if (StoneImpactFinder.Succeeded())
 	{
 		StoneImpactParticleSystem = StoneImpactFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundCue> Finder1(TEXT("/Game/FootStepSound/Footsteps_Metal/Footsteps_Metal_Walk/Metal_Walk_Cue_1"));
+	if (Finder1.Succeeded())
+	{
+		MetalWalkSoundCue = Finder1.Object;
+	}
+	static ConstructorHelpers::FObjectFinder<USoundCue> Finder2(TEXT("/Game/FootStepSound/Footsteps_Metal/Footsteps_Metal_Run/Metal_Run_Cue_1"));
+	if (Finder2.Succeeded())
+	{
+		MetalRunSoundCue = Finder2.Object;
+	}
+	static ConstructorHelpers::FObjectFinder<USoundCue> Finder3(TEXT("/Game/FootStepSound/Footsteps_Metal/Footsteps_Metal_Jump/Metal_JumpStart_Cue_1"));
+	if (Finder3.Succeeded())
+	{
+		MetalJumpSoundCue = Finder3.Object;
+	}
+	static ConstructorHelpers::FObjectFinder<USoundCue> Finder4(TEXT("/Game/FootStepSound/Footsteps_Metal/Footsteps_Metal_Jump/Metal_Land_Cue_1"));
+	if (Finder4.Succeeded())
+	{
+		MetalLandSoundCue = Finder4.Object;
 	}
 }
 
@@ -239,6 +264,45 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 	bAimTimeline.TickTimeline(DeltaTime);
 
 	Lean();
+
+	if (!FMath::IsNearlyZero(GetVelocity().Size()))
+	{
+		if (!bJumping)
+		{
+			if (GetCharacterMovement()->MaxWalkSpeed < 600.0f)
+			{
+				GetWorld()->GetTimerManager().ClearTimer(RunTimerHandle);
+				if (HasAuthority())
+				{
+					PlaySoundAtLocationMulticast(GetActorLocation(), MetalWalkSoundCue, 1.0f);
+				}
+				else
+				{
+					PlaySoundAtLocationServer(GetActorLocation(), MetalWalkSoundCue, 1.0f);
+				}
+			}
+			else
+			{
+				GetWorld()->GetTimerManager().ClearTimer(WalkTimerHandle);
+				if (HasAuthority())
+				{
+					PlaySoundAtLocationMulticast(GetActorLocation(), MetalRunSoundCue, 0.3f);
+				}
+				else
+				{
+					PlaySoundAtLocationServer(GetActorLocation(), MetalRunSoundCue, 0.3f);
+				}
+			}
+		}			
+	}
+	else
+	{
+		bWalking = false;
+		bSprinting = false;
+		bSoundPlaying = false;
+		GetWorld()->GetTimerManager().ClearTimer(WalkTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(RunTimerHandle);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -308,14 +372,14 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 	if (EnhancedInputComponent != nullptr) {
 		
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopJumping);
 
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Move);
 
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Look);
 
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Sprint);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &Afps_cppCharacter::Sprint);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &Afps_cppCharacter::StopSprint);
 
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &Afps_cppCharacter::Fire);
@@ -338,6 +402,39 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	}
 }
 
+void Afps_cppCharacter::Jump()
+{
+	Super::Jump();
+	bJumping = true;
+
+	if (HasAuthority())
+	{
+		PlaySoundAtLocationMulticast(GetActorLocation(), MetalJumpSoundCue, 0.0f);
+	}
+	else
+	{
+		PlaySoundAtLocationServer(GetActorLocation(), MetalJumpSoundCue, 0.0f);
+	}
+}
+void Afps_cppCharacter::StopJumping()
+{
+	Super::StopJumping();
+}
+
+void Afps_cppCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	bJumping = false;
+	if (HasAuthority())
+	{
+		PlaySoundAtLocationMulticast(GetActorLocation(), MetalLandSoundCue, 0.0f);
+	}
+	else
+	{
+		PlaySoundAtLocationServer(GetActorLocation(), MetalLandSoundCue, 0.0f);
+	}
+}
+
 void Afps_cppCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
@@ -351,7 +448,7 @@ void Afps_cppCharacter::Move(const FInputActionValue& Value)
 
 		// get forward vector
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	
+
 		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
@@ -376,31 +473,35 @@ void Afps_cppCharacter::Look(const FInputActionValue& Value)
 
 void Afps_cppCharacter::Sprint()
 {
-	if (GetLocalRole() < ROLE_Authority)
-	{
-		SprintServer(600.0f);
-	}
-	else
+	bSprinting = true;
+
+	if (HasAuthority())
 	{
 		if (GetCharacterMovement())
 		{
 			GetCharacterMovement()->MaxWalkSpeed = 600.0f;
 		}
 	}
+	else
+	{
+		SprintServer(600.0f);
+	}
 }
 
 void Afps_cppCharacter::StopSprint()
 {
-	if (GetLocalRole() < ROLE_Authority)
-	{
-		SprintServer(100.0f);
-	}
-	else
+	bSprinting = false;
+
+	if (HasAuthority())
 	{
 		if (GetCharacterMovement())
 		{
 			GetCharacterMovement()->MaxWalkSpeed = 100.0f;
 		}
+	}
+	else
+	{
+		SprintServer(100.0f);
 	}
 }
 
@@ -1013,12 +1114,12 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 		{
 			if (HasAuthority())
 			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
 				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 			else
 			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
 				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 		}
@@ -1026,12 +1127,12 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 		{
 			if (HasAuthority())
 			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
 				SpawnEmitterAtLocationMulticast(StoneImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 			else
 			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
 				SpawnEmitterAtLocationServer(StoneImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 		}
@@ -1039,12 +1140,12 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 		{
 			if (HasAuthority())
 			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
+				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
 				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 			else
 			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
+				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound, 0.0f);
 				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
 			}
 
@@ -1117,18 +1218,50 @@ bool Afps_cppCharacter::SprintServer_Validate(float MaxWalkSpeed)
 	return true;
 }
 
-void Afps_cppCharacter::PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound)
+void Afps_cppCharacter::PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound, float Delay)
 {
 	if (GetWorld())
 	{
+		if (!FMath::IsNearlyZero(Delay))
+		{
+			PlaySoundWithCooldown(Location, Sound, Delay);
+		}
+		else
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
+		}
+	}
+}
+
+void Afps_cppCharacter::PlaySoundWithCooldown(FVector Location, USoundBase* Sound, float Delay)
+{
+	FTimerHandle& TimerHandle = (GetCharacterMovement()->MaxWalkSpeed < 600.0f) ? WalkTimerHandle : RunTimerHandle;
+
+	// TimerHandle 초기화
+	if (!TimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateLambda([this, &TimerHandle]()
+			{
+				// 타이머가 만료되었을 때 사운드 재생 상태를 false로 설정
+				if (TimerHandle.IsValid())
+				{
+					bSoundPlaying = false;
+				}
+			}), Delay, true);
+
+		// 사운드 재생
+	}
+	if (!bSoundPlaying)
+	{
+		bSoundPlaying = true;
 		UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
 	}
 }
 
-void Afps_cppCharacter::PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound)
+void Afps_cppCharacter::PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound, float Delay)
 {
 	if (HasAuthority()) {
-		PlaySoundAtLocationMulticast(Location, Sound);
+		PlaySoundAtLocationMulticast(Location, Sound, Delay);
 	}
 	
 }

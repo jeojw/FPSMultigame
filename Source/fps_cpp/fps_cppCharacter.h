@@ -102,6 +102,21 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bStopLeftHandIK;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	bool bSwitching;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	bool bWalking;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	bool bSprinting;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	bool bSoundPlaying;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	bool bJumping;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
 	bool bLeanLeft;
 
@@ -190,6 +205,11 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UParticleSystem* MetalImpactParticleSystem;
 	UParticleSystem* StoneImpactParticleSystem;
 
+	USoundCue* MetalWalkSoundCue;
+	USoundCue* MetalRunSoundCue;
+	USoundCue* MetalJumpSoundCue;
+	USoundCue* MetalLandSoundCue;
+
 	FTimerHandle CheckWallTimerHandle;
 
 	void ApplyRecoil(float PitchValue, float YawValue);
@@ -201,6 +221,10 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UAnimInstance> bAnimationBlueprintRef;
+
+	FTimerHandle WalkTimerHandle;
+	FTimerHandle RunTimerHandle;
+	void PlaySoundWithCooldown(FVector Location, USoundBase* Sound, float Delay);
 public:
 	Afps_cppCharacter();
 
@@ -292,6 +316,10 @@ public:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
+	virtual void Jump() override;
+	virtual void StopJumping() override;
+	virtual void Landed(const FHitResult& Hit) override;
+
 	void Sprint();
 
 	void StopSprint();
@@ -326,9 +354,9 @@ public:
 	void FireProjectileToDirection();
 
 	UFUNCTION(NetMulticast, Unreliable)
-	void PlaySoundAtLocationMulticast(FVector Location, USoundBase* Sound);
+	void PlaySoundAtLocationMulticast(FVector Location, USoundBase* Sound, float Delay);
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
-	void PlaySoundAtLocationServer(FVector Location, USoundBase* Sound);
+	void PlaySoundAtLocationServer(FVector Location, USoundBase* Sound, float Delay);
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void SpawnEmitterAtLocationMulticast(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
@@ -445,8 +473,8 @@ protected:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-	void PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound);
-	void PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound);
+	void PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound, float Delay);
+	void PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound, float Delay);
 
 	void SpawnEmitterAtLocationMulticast_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
 	void SpawnEmitterAtLocationServer_Implementation(UParticleSystem* EmitterTemplate, FVector Location, FRotator Rotation, FVector Scale);
