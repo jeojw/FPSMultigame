@@ -66,6 +66,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	bAlwaysRelevant = true;
 
@@ -260,15 +261,21 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 	GetWorldTimerManager().SetTimer(bTimerHandle_CheckWallTick, this, &Afps_cppCharacter::CheckWallTick, 0.02f, true);
 
 	bRecoilTimeline.TickTimeline(DeltaTime);
-
 	bAimTimeline.TickTimeline(DeltaTime);
-
-	Lean();
 
 	if (bIsDead)
 	{
-		DestroyWeapon();
+		if (HasAuthority())
+		{
+			DeactivateObjectMulticast();
+		}
+		else
+		{
+			DeactivateObjectServer();
+		}
 	}
+
+	Lean();
 
 	if (!FMath::IsNearlyZero(GetVelocity().Size()) && !bIsDead)
 	{
@@ -1627,6 +1634,26 @@ void Afps_cppCharacter::PlayReloadSequenceServer_Implementation(EItemTypeEnum We
 }
 
 bool Afps_cppCharacter::PlayReloadSequenceServer_Validate(EItemTypeEnum WeaponType)
+{
+	return true;
+}
+
+void Afps_cppCharacter::DeactivateObjectMulticast_Implementation()
+{
+	DestroyWeapon();
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	GetCharacterMovement()->GravityScale = 0.0f;
+
+	GetCharacterMovement()->DisableMovement();
+}
+
+void Afps_cppCharacter::DeactivateObjectServer_Implementation()
+{
+	DeactivateObjectMulticast();
+}
+
+bool Afps_cppCharacter::DeactivateObjectServer_Validate()
 {
 	return true;
 }

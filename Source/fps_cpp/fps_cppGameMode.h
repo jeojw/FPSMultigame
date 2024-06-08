@@ -32,7 +32,7 @@ private:
 	void InitializeNetworkSettings();
 
 	UPROPERTY(EditAnywhere)
-	TSubclassOf<APawn> PlayerPawnBPClass;
+	TSubclassOf<class Afps_cppCharacter> PlayerPawnBPClass;
 
 	UPROPERTY(EditAnywhere)
 	Afps_cppCharacter* Player;

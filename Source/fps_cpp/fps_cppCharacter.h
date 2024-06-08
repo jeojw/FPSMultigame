@@ -460,6 +460,12 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_SetLeanRightBooleans(bool Right);
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void DeactivateObjectServer();
+	// Function to handle the deactivation on clients
+	UFUNCTION(NetMulticast, Reliable)
+	void DeactivateObjectMulticast();
+
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform) override;
@@ -558,6 +564,10 @@ protected:
 	void PlayReloadSequenceMulticast_Implementation(EItemTypeEnum WeaponType);
 	void PlayReloadSequenceServer_Implementation(EItemTypeEnum WeaponType);
 	bool PlayReloadSequenceServer_Validate(EItemTypeEnum WeaponType);
+
+	void DeactivateObjectServer_Implementation();
+	bool DeactivateObjectServer_Validate();
+	void DeactivateObjectMulticast_Implementation();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

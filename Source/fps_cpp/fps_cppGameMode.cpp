@@ -12,20 +12,31 @@ Afps_cppGameMode::Afps_cppGameMode()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
-	if (PlayerPawnBPClassFinder.Class != NULL)
+	static ConstructorHelpers::FClassFinder<Afps_cppCharacter> PlayerPawnBPClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
+	if (PlayerPawnBPClassFinder.Class != nullptr)
 	{
 		PlayerPawnBPClass = PlayerPawnBPClassFinder.Class;
 		DefaultPawnClass = PlayerPawnBPClass;
 	}
 
-	RespawnTime = 10.0f;
+	static ConstructorHelpers::FObjectFinder<Afps_cppCharacter> PlayerPawnBPObjectFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
+	if (PlayerPawnBPObjectFinder.Object != nullptr)
+	{
+		Player = PlayerPawnBPObjectFinder.Object;
+	}
+
+	RespawnTime = 1.0f;
 }
 
 void Afps_cppGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-	Player = Cast<Afps_cppCharacter>(PlayerPawnBPClass);
+	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+	if (PlayerController)
+	{
+		PlayerController->Possess(Player);
+	}
+
 	InitializeNetworkSettings();
 }
 
@@ -34,6 +45,7 @@ void Afps_cppGameMode::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	if (Player && Player->GetIsDead())
 	{
+		UE_LOG(LogTemp, Log, TEXT("Respawn!!"));
 		Respawn();
 	}
 }
@@ -65,18 +77,12 @@ void Afps_cppGameMode::RespawnFunction()
 			APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
 			if (PlayerController)
 			{
-				APawn* OldPawn = PlayerController->GetPawn();
-				APawn* NewPawn = GetWorld()->SpawnActor<APawn>(PlayerPawnBPClass, FVector(900.0f, 1100.0f, 92.0f), FRotator::ZeroRotator);
+				Afps_cppCharacter* NewPawn = GetWorld()->SpawnActor<Afps_cppCharacter>(PlayerPawnBPClass, FVector(900.0f, 1100.0f, 92.0f), FRotator::ZeroRotator);
 				if (NewPawn)
 				{
-					if (OldPawn)
-					{
-						OldPawn->Destroy();
-					}
-
 					PlayerController->Possess(NewPawn);
 
-					Player = Cast<Afps_cppCharacter>(NewPawn);
+					Player = NewPawn;
 					if (Player)
 					{
 						Player->SetIsDead(false);
