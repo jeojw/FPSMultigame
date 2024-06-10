@@ -15,8 +15,22 @@ class Afps_cppGameMode : public AGameModeBase
 	UPROPERTY()
 	float RespawnTime;
 
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<UUserWidget> StartWidgetClass;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<UUserWidget> LoginWidgetClass;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<UUserWidget> SignupWidgetClass;
+
 public:
 	Afps_cppGameMode();
+
+	void Login();
+	void Signup();
+	void StartGame();
+	
 	
 	void Respawn();
 	void RespawnFunction();
@@ -36,6 +50,9 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	Afps_cppCharacter* Player;
+
+	UPROPERTY(EditAnywhere)
+	UUserWidget* CurrentWidget;
 
 	FTimerHandle RespawnTimerHandle;
 };

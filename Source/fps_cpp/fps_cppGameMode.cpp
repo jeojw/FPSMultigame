@@ -13,24 +13,40 @@ Afps_cppGameMode::Afps_cppGameMode()
 	PrimaryActorTick.bCanEverTick = true;
 	// set default pawn class to our Blueprinted character
 	static ConstructorHelpers::FClassFinder<Afps_cppCharacter> PlayerPawnBPClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
-	if (PlayerPawnBPClassFinder.Class != nullptr)
+	if (PlayerPawnBPClassFinder.Succeeded())
 	{
 		PlayerPawnBPClass = PlayerPawnBPClassFinder.Class;
 		DefaultPawnClass = PlayerPawnBPClass;
 	}
 
 	static ConstructorHelpers::FObjectFinder<Afps_cppCharacter> PlayerPawnBPObjectFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
-	if (PlayerPawnBPObjectFinder.Object != nullptr)
+	if (PlayerPawnBPObjectFinder.Succeeded())
 	{
 		Player = PlayerPawnBPObjectFinder.Object;
 	}
 
+	static ConstructorHelpers::FClassFinder<UUserWidget> StartWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_StartMenuWidget"));
+	if (StartWidgetFinder.Succeeded())
+	{
+		StartWidgetClass = StartWidgetFinder.Class;
+	}
+	
 	RespawnTime = 1.0f;
 }
 
 void Afps_cppGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (StartWidgetClass != nullptr)
+	{
+		CurrentWidget = CreateWidget<UUserWidget>(GetWorld(), StartWidgetClass);
+		if (StartWidgetClass != nullptr)
+		{
+			CurrentWidget->AddToViewport();
+		}
+	}
+
 	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
 	if (PlayerController)
 	{
@@ -100,4 +116,9 @@ void Afps_cppGameMode::InitializeNetworkSettings()
 {
 	// 네트워크 설정 초기화 (필요한 경우 추가 설정)
 	UE_LOG(LogTemp, Warning, TEXT("Network settings initialized"));
+}
+
+void Afps_cppGameMode::StartGame()
+{
+	
 }

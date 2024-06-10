@@ -49,6 +49,12 @@ Afps_cppCharacter::Afps_cppCharacter()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> PlayerMeshFinder(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny"));
+	if (PlayerMeshFinder.Succeeded())
+	{
+		GetMesh()->SetSkeletalMeshAsset(PlayerMeshFinder.Object);
+	}
+
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetMesh(), FName("neck_02"));
@@ -163,6 +169,12 @@ Afps_cppCharacter::Afps_cppCharacter()
 	{
 		MetalLandSoundCue = Finder4.Object;
 	}
+
+	static ConstructorHelpers::FClassFinder<UUserWidget> PlayerUIFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/PlayerMainUI"));
+	if (PlayerUIFinder.Succeeded())
+	{
+		PlayerUIWidgetClass = PlayerUIFinder.Class;
+	}
 }
 
 void Afps_cppCharacter::PostInitializeComponents()
@@ -201,6 +213,16 @@ void Afps_cppCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+
+	if (IsLocallyControlled())
+	{
+		PlayerUIWidget = CreateWidget<UUserWidget>(UGameplayStatics::GetPlayerController(GetWorld(), 0), PlayerUIWidgetClass);
+
+		if (PlayerUIWidget)
+		{
+			PlayerUIWidget->AddToViewport();
+		}
+	}
 
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 	if (PlayerController)

@@ -20,6 +20,7 @@
 #include "Sound/SoundCue.h"
 #include "Components/TimelineComponent.h"
 #include "PaperSprite.h"
+#include "Blueprint/UserWidget.h"
 #include "fps_cppCharacter.generated.h"
 
 
@@ -227,6 +228,11 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	FTimerHandle WalkTimerHandle;
 	FTimerHandle RunTimerHandle;
+
+	UUserWidget* PlayerUIWidget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UUserWidget> PlayerUIWidgetClass;
 public:
 	Afps_cppCharacter();
 
