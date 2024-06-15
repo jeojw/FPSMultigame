@@ -49,6 +49,9 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UCameraComponent* FollowCamera;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	USkeletalMeshComponent* FPSMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UInventory* InventoryComponent;
 	
 	/** MappingContext */
@@ -93,6 +96,9 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 	UChildActorComponent* WeaponBase;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+	UChildActorComponent* FPSWeaponBase;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;
@@ -475,6 +481,7 @@ public:
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform) override;
+	virtual void IF_GetLeftHandSocketTransform_FPS_Implementation(FTransform& OutTransform) override;
 	virtual void IF_GetHandSwayFloats_Implementation(float& SideMove, float& MouseX, float& MouseY) override;
 	virtual void IF_GetIsAim_Implementation(bool& Aim) override;
 	virtual void IF_GetStopLeftHandIK_Implementation(bool& StopIK) override;

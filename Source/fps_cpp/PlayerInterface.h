@@ -28,6 +28,9 @@ public:
 	void IF_GetLeftHandSocketTransform(FTransform& OutTransform);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void IF_GetLeftHandSocketTransform_FPS(FTransform& OutTransform);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void IF_GetHandSwayFloats(float& SideMove, float& MouseX, float& MouseY);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
