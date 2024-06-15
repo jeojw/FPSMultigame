@@ -19,7 +19,6 @@
 #include "Misc/FileHelper.h"
 #include "HAL/PlatformFilemanager.h"
 #include "Modules/ModuleManager.h"
-#include "../../../../Program Files/Epic Games/UE_5.4/Engine/Plugins/2D/Paper2D/Source/Paper2DEditor/Private/Atlasing/PaperAtlasTextureHelpers.h"
 #include "PlayerWidget.generated.h"
 
 /**

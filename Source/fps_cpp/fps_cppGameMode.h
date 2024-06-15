@@ -27,8 +27,8 @@ class Afps_cppGameMode : public AGameModeBase
 public:
 	Afps_cppGameMode();
 
-	void Login();
-	void Signup();
+	//void Login();
+	//void Signup();
 	void StartGame();
 	
 	

@@ -38,14 +38,14 @@ void Afps_cppGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (StartWidgetClass != nullptr)
+	/*if (StartWidgetClass != nullptr)
 	{
 		CurrentWidget = CreateWidget<UUserWidget>(GetWorld(), StartWidgetClass);
 		if (StartWidgetClass != nullptr)
 		{
 			CurrentWidget->AddToViewport();
 		}
-	}
+	}*/
 
 	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
 	if (PlayerController)
