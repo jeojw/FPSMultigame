@@ -56,21 +56,6 @@ void AWeapon_Base::BeginPlay()
 void AWeapon_Base::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-	if (PlayerPawn)
-	{
-		APlayerController* PlayerController = Cast<APlayerController>(PlayerPawn->GetController());
-		if (PlayerController)
-		{
-			FVector CameraLocation;
-			FRotator CameraRotation;
-			PlayerController->GetPlayerViewPoint(CameraLocation, CameraRotation);
-
-			// AimOffset 업데이트
-			UpdateAimOffset(FVector(15, 15 ,15));
-		}
-	}
 }
 void AWeapon_Base::GetShellTransform_Implementation(FTransform& T)
 {
@@ -78,13 +63,5 @@ void AWeapon_Base::GetShellTransform_Implementation(FTransform& T)
 	{
 		FTransform SocketTransform = SkeletalMesh->GetSocketTransform(FName("ShellSocket"));
 		T = SocketTransform;
-	}
-}
-
-void AWeapon_Base::UpdateAimOffset(FVector NewLocation)
-{
-	if (AimOffset)
-	{
-		AimOffset->SetRelativeLocation(NewLocation);
 	}
 }

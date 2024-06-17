@@ -55,7 +55,4 @@ public:
 	UAnimSequence* GetReloadSequence() const { return ReloadSequence; }
 
 	void GetShellTransform_Implementation(FTransform& T);
-
-	UFUNCTION()
-	void UpdateAimOffset(FVector NewLocation);
 };

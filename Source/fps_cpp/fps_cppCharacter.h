@@ -159,7 +159,7 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<APickUpBase> bCurrentWeaponPickUpClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
 	FWeaponStatsStruct bCurrentStats;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
@@ -240,6 +240,9 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	TSubclassOf<UUserWidget> PlayerUIWidgetClass;
 
 	float CurrentLean;
+
+	FVector OriginMeshVector;
+	FVector OriginCameraVector;
 public:
 	Afps_cppCharacter();
 

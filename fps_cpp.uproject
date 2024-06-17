@@ -24,7 +24,7 @@
 		},
 		{
 			"Name": "MultiplayerFPS",
-			"Enabled": true,
+			"Enabled": false,
 			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/061176d2d7b34d289510d98672dddc2a"
 		},
 		{

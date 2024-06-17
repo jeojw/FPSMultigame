@@ -59,20 +59,25 @@ Afps_cppCharacter::Afps_cppCharacter()
 		BodyMesh->SetSkeletalMeshAsset(PlayerMeshFinder.Object);
 	}
 
+	OriginCameraVector = FVector(0, 0, 0);
+
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(RootComponent);
+	FollowCamera->SetupAttachment(BodyMesh, FName("neck_02"));
 	FollowCamera->bUsePawnControlRotation = true;
+	FollowCamera->SetRelativeLocation(OriginCameraVector);
 
 	WeaponBase = CreateDefaultSubobject<UChildActorComponent>(TEXT("WeaponBase"));
 	WeaponBase->SetupAttachment(BodyMesh, FName(TEXT("WeaponSocket")));
 	WeaponBase->SetIsReplicated(true);
 	WeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
 
+	OriginMeshVector = FVector(-25.344501f, -13.573182f, -148.070772f);
+
 	FPSMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FPSMesh"));
 	FPSMesh->SetupAttachment(FollowCamera);
 	FPSMesh->SetOnlyOwnerSee(true);
 	FPSMesh->SetCastShadow(false);
-	FPSMesh->SetRelativeLocation(FVector(-34.052884f, 3.144998f, -148.58977f));
+	FPSMesh->SetRelativeLocation(OriginMeshVector);
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FPSMeshFinder(TEXT("/Game/Characters/Mannequins/Meshes/SK_Mannequin_Arms"));
 	if (FPSMeshFinder.Succeeded())
@@ -108,6 +113,12 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	Tags.Add(FName("Flesh"));
 	Tags.Add(FName("Player"));
+
+	static ConstructorHelpers::FObjectFinder< UInputMappingContext> IMC_DefualtFinder(TEXT("/Game/ThirdPerson/Input/IMC_Default"));
+	if (IMC_DefualtFinder.Succeeded())
+	{
+		DefaultMappingContext = IMC_DefualtFinder.Object;
+	}
 
 	static ConstructorHelpers::FObjectFinder<UCurveFloat> RecoilCurve(TEXT("/Game/Characters/Mannequins/Animations/RecoilTrack"));
 	if (RecoilCurve.Succeeded()) 
@@ -169,6 +180,8 @@ Afps_cppCharacter::Afps_cppCharacter()
 		StoneImpactParticleSystem = StoneImpactFinder.Object;
 	}
 
+
+
 	static ConstructorHelpers::FObjectFinder<USoundCue> Finder1(TEXT("/Game/FootStepSound/Footsteps_Metal/Footsteps_Metal_Walk/Metal_Walk_Cue_1"));
 	if (Finder1.Succeeded())
 	{
@@ -207,26 +220,26 @@ void Afps_cppCharacter::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	// 소유권 설정
-	if (APlayerController* PC = Cast<APlayerController>(NewController))
-	{
-		SetOwner(PC);
+	//if (APlayerController* PC = Cast<APlayerController>(NewController))
+	//{
+	//	SetOwner(PC);
 
-		APlayerController* PlayerController = Cast<APlayerController>(GetController());
-		if (PlayerController)
-		{
-			UE_LOG(LogTemp, Log, TEXT("BeginPlay: Character controlled by PlayerController"));
-			SetOwner(PlayerController);
+	//	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	//	if (PlayerController)
+	//	{
+	//		UE_LOG(LogTemp, Log, TEXT("BeginPlay: Character controlled by PlayerController"));
+	//		SetOwner(PlayerController);
 
-			// Initialize the PlayerInterface
-			PlayerInterface.SetInterface(Cast<IPlayerInterface>(this));
-			PlayerInterface.SetObject(this);
+	//		// Initialize the PlayerInterface
+	//		PlayerInterface.SetInterface(Cast<IPlayerInterface>(this));
+	//		PlayerInterface.SetObject(this);
 
-			if (!PlayerInterface.GetObject() || !PlayerInterface.GetInterface())
-			{
-				UE_LOG(LogTemp, Error, TEXT("Failed to initialize PlayerInterface"));
-			}
-		}
-	}
+	//		if (!PlayerInterface.GetObject() || !PlayerInterface.GetInterface())
+	//		{
+	//			UE_LOG(LogTemp, Error, TEXT("Failed to initialize PlayerInterface"));
+	//		}
+	//	}
+	//}
 }
 
 void Afps_cppCharacter::BeginPlay()
@@ -411,7 +424,6 @@ void Afps_cppCharacter::CheckWallTick()
 		}
 	}
 }
-
 void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -459,6 +471,7 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
 	}
 }
+
 
 void Afps_cppCharacter::Jump()
 {
@@ -617,10 +630,8 @@ void Afps_cppCharacter::ControlAim(float Value)
 {
 	if (!bIsDead)
 	{
-		FVector OriginMeshVector = FVector(-34.052884f, 3.144998f, -148.58977f);
-		FVector AimMeshVector = FVector(-79.633642f, -26.189007f, -142.574521f);
-		FVector OriginCameraVector = FVector(18.50426f, -12.302132f, -0.390666f);
-		FVector AimCameraVector = FVector(76.881805f, -9.614142f, -6.287431f);
+		FVector AimMeshVector = FVector(-77.216008f, -20.122222f, -148.070772f);
+		FVector AimCameraVector = FVector(55, 34, -12);
 		if (FPSMesh && FPSMesh->IsValidLowLevel() &&
 			FollowCamera && FollowCamera->IsValidLowLevel())
 		{
@@ -852,6 +863,19 @@ void Afps_cppCharacter::FireDelayCompleted()
 void Afps_cppCharacter::ReloadDelayCompleted()
 {
 	bIsAiming = true;
+
+	if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
+	{
+		InventoryComponent->ReloadBullet(bCurrentItemSelection, bCurrentStats);
+		if (HasAuthority())
+		{
+			StopLeftHandIKMulticast(false);
+		}
+		else
+		{
+			StopLeftHandIKServer(false);
+		}
+	}
 }
 
 void Afps_cppCharacter::Reload()
@@ -919,21 +943,13 @@ void Afps_cppCharacter::Reload()
 						bCurrentStats.ReloadTime,
 						false
 					);
-
-					if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
-					{
-						InventoryComponent->ReloadBullet(bCurrentItemSelection, bCurrentStats);
-						if (HasAuthority())
-						{
-							StopLeftHandIKMulticast(false);
-						}
-						else
-						{
-							StopLeftHandIKServer(false);
-						}
-					}
 				}
 			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Full!!!"));
+			UE_LOG(LogTemp, Error, TEXT("%d"), bCurrentStats.MagSize);
 		}
 	}
 }
@@ -1747,6 +1763,7 @@ void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(Afps_cppCharacter, bCurrentWeaponClass);
+	DOREPLIFETIME(Afps_cppCharacter, bCurrentStats);
 
 	DOREPLIFETIME(Afps_cppCharacter, bAnimState);
 
