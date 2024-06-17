@@ -40,13 +40,12 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 {
 	GENERATED_BODY()
 
-	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	USpringArmComponent* CameraBoom;
-
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	USkeletalMeshComponent* BodyMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* FPSMesh;
@@ -239,6 +238,8 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UUserWidget> PlayerUIWidgetClass;
+
+	float CurrentLean;
 public:
 	Afps_cppCharacter();
 
@@ -308,9 +309,6 @@ public:
 	UPaperSprite* GetWeaponIcon() const { return WeaponIcon; }
 	void SetWeaponIcon(UPaperSprite* NewIcon) { WeaponIcon = NewIcon; }
 
-	UFUNCTION(BlueprintCallable)
-	void SetWeaponClass(TSubclassOf<AActor> WBase);
-
 	UFUNCTION()
 	void ControllerRecoil(float RecoilAmount);
 
@@ -361,7 +359,7 @@ public:
 
 	void SwitchWeapon();
 
-	void Lean();
+	void Lean(const FInputActionValue& Value);
 
 	UFUNCTION(BlueprintCallable)
 	void EquipItem();
@@ -507,8 +505,6 @@ protected:
 
 	virtual void Tick(float DeltaTime) override;
 
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 	void PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound);

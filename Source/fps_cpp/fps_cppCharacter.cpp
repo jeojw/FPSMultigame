@@ -44,31 +44,35 @@ Afps_cppCharacter::Afps_cppCharacter()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 
+	if (GetMesh())
+	{
+		GetMesh()->DestroyComponent();
+	}
+
+	BodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BodyMesh"));
+	BodyMesh->SetupAttachment(RootComponent);
+	BodyMesh->SetOwnerNoSee(true);
+
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> PlayerMeshFinder(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny"));
 	if (PlayerMeshFinder.Succeeded())
 	{
-		GetMesh()->SetSkeletalMeshAsset(PlayerMeshFinder.Object);
+		BodyMesh->SetSkeletalMeshAsset(PlayerMeshFinder.Object);
 	}
 
-	// Create a camera boom (pulls in towards the player if there is a collision)
-	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(GetMesh(), FName("neck_02"));
-	CameraBoom->TargetArmLength = 0.0f; // The camera follows at this distance behind the character	
-	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
-
-	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
-	FollowCamera->bUsePawnControlRotation = true; // Camera does not rotate relative to arm
+	FollowCamera->SetupAttachment(RootComponent);
+	FollowCamera->bUsePawnControlRotation = true;
 
 	WeaponBase = CreateDefaultSubobject<UChildActorComponent>(TEXT("WeaponBase"));
-	WeaponBase->SetupAttachment(GetMesh(), FName(TEXT("WeaponSocket")));
+	WeaponBase->SetupAttachment(BodyMesh, FName(TEXT("WeaponSocket")));
+	WeaponBase->SetIsReplicated(true);
 	WeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
 
 	FPSMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FPSMesh"));
 	FPSMesh->SetupAttachment(FollowCamera);
 	FPSMesh->SetOnlyOwnerSee(true);
-	FPSMesh->bSelfShadowOnly = true;
+	FPSMesh->SetCastShadow(false);
+	FPSMesh->SetRelativeLocation(FVector(-34.052884f, 3.144998f, -148.58977f));
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FPSMeshFinder(TEXT("/Game/Characters/Mannequins/Meshes/SK_Mannequin_Arms"));
 	if (FPSMeshFinder.Succeeded())
@@ -78,6 +82,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	FPSWeaponBase = CreateDefaultSubobject<UChildActorComponent>(TEXT("FPSWeaponBase"));
 	FPSWeaponBase->SetupAttachment(FPSMesh, FName(TEXT("WeaponSocket")));
+	FPSWeaponBase->SetIsReplicated(true);
 	FPSWeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
@@ -119,7 +124,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	static ConstructorHelpers::FClassFinder<UAnimInstance> BlueprintAnim(TEXT("/Game/Characters/Mannequins/Animations/ABP_Manny"));
 	if (BlueprintAnim.Succeeded())
 	{
-		GetMesh()->SetAnimInstanceClass(BlueprintAnim.Class);
+		BodyMesh->SetAnimInstanceClass(BlueprintAnim.Class);
 	}
 
 	static ConstructorHelpers::FClassFinder<UAnimInstance> FPSBlueprintAnim(TEXT("/Game/Characters/Mannequins/Animations/ABP_ArmManny"));
@@ -229,6 +234,8 @@ void Afps_cppCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
+	FollowCamera->AttachToComponent(BodyMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("neck_02"));
+
 	if (IsLocallyControlled())
 	{
 		PlayerUIWidget = CreateWidget<UUserWidget>(UGameplayStatics::GetPlayerController(GetWorld(), 0), PlayerUIWidgetClass);
@@ -237,6 +244,12 @@ void Afps_cppCharacter::BeginPlay()
 		{
 			PlayerUIWidget->AddToViewport();
 		}
+	}
+
+	if (FPSWeaponBase && WeaponBase)
+	{
+		FPSWeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
+		WeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
 	}
 
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
@@ -283,6 +296,7 @@ void Afps_cppCharacter::BeginPlay()
 	{
 		GetWorldTimerManager().SetTimer(CheckWallTimerHandle, this, &Afps_cppCharacter::CheckWallTick, 0.1f, true);
 	}
+
 	EquipItem();
 }
 
@@ -306,8 +320,6 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 			DeactivateObjectServer();
 		}
 	}
-
-	Lean();
 
 	if (!FMath::IsNearlyZero(GetVelocity().Size()) && !bIsDead)
 	{
@@ -605,12 +617,20 @@ void Afps_cppCharacter::ControlAim(float Value)
 {
 	if (!bIsDead)
 	{
-		if (CameraBoom && CameraBoom->IsValidLowLevel())
+		FVector OriginMeshVector = FVector(-34.052884f, 3.144998f, -148.58977f);
+		FVector AimMeshVector = FVector(-79.633642f, -26.189007f, -142.574521f);
+		FVector OriginCameraVector = FVector(18.50426f, -12.302132f, -0.390666f);
+		FVector AimCameraVector = FVector(76.881805f, -9.614142f, -6.287431f);
+		if (FPSMesh && FPSMesh->IsValidLowLevel() &&
+			FollowCamera && FollowCamera->IsValidLowLevel())
 		{
-			FVector NewLocation = FMath::Lerp(FVector(10.385671f, 1.909163f, -1.909163f), FVector(13.945591f, 1.909163f, 12.256057f), Value);
-			CameraBoom->SetRelativeLocation(NewLocation);
+			FVector NeckLocation = BodyMesh->GetBoneLocation(FName("neck_02"));
+			FVector NewMeshLocation = FMath::Lerp(OriginMeshVector, AimMeshVector, Value);
+			FVector NewCameraLocation = FMath::Lerp(OriginCameraVector, AimCameraVector, Value);
+			FPSMesh->SetRelativeLocation(NewMeshLocation);
+			FollowCamera->SetRelativeLocation(NewCameraLocation);
 
-			UE_LOG(LogTemp, Log, TEXT("CameraBoom location set to: %s"), *NewLocation.ToString());
+			UE_LOG(LogTemp, Log, TEXT("CameraBoom location set to: %s"), *NeckLocation.ToString());
 		}
 	}
 	
@@ -688,30 +708,28 @@ void Afps_cppCharacter::RifleFire()
 					false
 				);
 				InventoryComponent->ReduceBullet(bCurrentItemSelection);
-				if ((WeaponBase && WeaponBase->GetChildActor()) &&
-					(FPSWeaponBase && FPSWeaponBase->GetChildActor()))
+				if (FPSWeaponBase && FPSWeaponBase->GetChildActor())
 				{
-					AWeapon_Base_M4* Weapon = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
 					AWeapon_Base_M4* FPSWeapon = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
-					if (Weapon)
+					if (FPSWeapon)
 					{
-						if (!Weapon->GetIsReplicated())
+						if (!FPSWeapon->GetIsReplicated())
 						{
-							Weapon->SetReplicates(true);
+							FPSWeapon->SetReplicates(true);
 						}
 						FTransform ShellTransform;
-						IGunInterface::Execute_GetShellTransform(Weapon, ShellTransform);
+						IGunInterface::Execute_GetShellTransform(FPSWeapon, ShellTransform);
 						EjectShell(ShellTransform.GetLocation(), FRotator(ShellTransform.GetRotation()));
 						FireProjectileToDirection();
 
-						if (GetMesh()->GetAnimInstance() &&
+						if (BodyMesh->GetAnimInstance() &&
 							FPSMesh->GetAnimInstance())
 						{
-							UFunction* F_Procedural_Recoil = GetMesh()->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
+							UFunction* F_Procedural_Recoil = BodyMesh->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
 							UFunction* F_Procedural_Recoil_FPS = FPSMesh->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
 							if (F_Procedural_Recoil && F_Procedural_Recoil_FPS)
 							{
-								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
+								BodyMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
 								FPSMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil_FPS, &bCurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
@@ -724,7 +742,15 @@ void Afps_cppCharacter::RifleFire()
 								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, bCurrentStats.FireRate, false);
 							}
 						}
+						else
+						{
+							UE_LOG(LogTemp, Error, TEXT("AnimInstace is nullptr"));
+						}
 
+					}
+					else
+					{
+						UE_LOG(LogTemp, Error, TEXT("FPSWeapon is nullptr"));
 					}
 				}
 			}
@@ -748,26 +774,29 @@ void Afps_cppCharacter::PistolFire()
 					false
 				);
 				InventoryComponent->ReduceBullet(bCurrentItemSelection);
-				if ((WeaponBase && WeaponBase->GetChildActor()) &&
-					(FPSWeaponBase && FPSWeaponBase->GetChildActor()))
+				if (FPSWeaponBase && FPSWeaponBase->GetChildActor())
 				{
-					AWeapon_Base_Pistol* Weapon = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
 					AWeapon_Base_Pistol* FPSWeapon = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
-					if (Weapon)
+					if (FPSWeapon)
 					{
+						if (!FPSWeapon->GetIsReplicated())
+						{
+							FPSWeapon->SetReplicates(true);
+						}
+
 						FTransform ShellTransform;
-						IGunInterface::Execute_GetShellTransform(Weapon, ShellTransform);
+						IGunInterface::Execute_GetShellTransform(FPSWeapon, ShellTransform);
 						EjectShell(ShellTransform.GetLocation(), FRotator(ShellTransform.GetRotation()));
 						FireProjectileToDirection();
 
-						if (GetMesh()->GetAnimInstance() &&
+						if (BodyMesh->GetAnimInstance() &&
 							FPSMesh->GetAnimInstance())
 						{
-							UFunction* F_Procedural_Recoil = GetMesh()->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
+							UFunction* F_Procedural_Recoil = BodyMesh->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
 							UFunction* F_Procedural_Recoil_FPS = FPSMesh->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
 							if (F_Procedural_Recoil && F_Procedural_Recoil_FPS)
 							{
-								GetMesh()->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
+								BodyMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
 								FPSMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil_FPS, &bCurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
@@ -848,7 +877,6 @@ void Afps_cppCharacter::Reload()
 			if (WeaponBase && WeaponBase->GetChildActor() && 
 				FPSWeaponBase && FPSWeaponBase->GetChildActor())
 			{
-				AWeapon_Base* WB = Cast<AWeapon_Base>(WeaponBase->GetChildActor());
 				if (bCurrentReloadAnimation)
 				{
 					if (HasAuthority())
@@ -860,8 +888,7 @@ void Afps_cppCharacter::Reload()
 						PlayAnimMontageServer(bCurrentReloadAnimation);
 					}
 
-					AWeapon_Base_M4* WB_M4 = Cast<AWeapon_Base_M4>(WB);
-					if (WB_M4)
+					if (bAnimState == EAnimStateEnum::Rifle)
 					{
 						if (HasAuthority())
 						{
@@ -873,8 +900,7 @@ void Afps_cppCharacter::Reload()
 						}
 					}
 
-					AWeapon_Base_Pistol* WB_Pistol = Cast<AWeapon_Base_Pistol>(WB);
-					if (WB_Pistol)
+					else if (bAnimState == EAnimStateEnum::Pistol)
 					{
 						if (HasAuthority())
 						{
@@ -907,7 +933,6 @@ void Afps_cppCharacter::Reload()
 						}
 					}
 				}
-
 			}
 		}
 	}
@@ -1003,13 +1028,15 @@ void Afps_cppCharacter::SwitchWeapon()
 	}
 }
 
-void Afps_cppCharacter::Lean()
+void Afps_cppCharacter::Lean(const FInputActionValue& Value)
 {
 	if (!bIsDead)
 	{
 		APlayerController* PlayerController = Cast<APlayerController>(GetController());
 		if (PlayerController)
 		{
+			float LeanValue = Value.Get<float>();
+
 			if (PlayerController->IsInputKeyDown(EKeys::Q))
 			{
 				if (HasAuthority())
@@ -1020,6 +1047,7 @@ void Afps_cppCharacter::Lean()
 				{
 					SetLeanLeftServer(true);
 				}
+				CurrentLean = LeanValue * -15.0f;
 			}
 			else
 			{
@@ -1031,6 +1059,7 @@ void Afps_cppCharacter::Lean()
 				{
 					SetLeanLeftServer(false);
 				}
+				CurrentLean = 0;
 			}
 
 			if (PlayerController->IsInputKeyDown(EKeys::E))
@@ -1043,6 +1072,7 @@ void Afps_cppCharacter::Lean()
 				{
 					SetLeanRightServer(true);
 				}
+				CurrentLean = LeanValue * 15.0f;
 			}
 			else
 			{
@@ -1054,6 +1084,7 @@ void Afps_cppCharacter::Lean()
 				{
 					SetLeanRightServer(false);
 				}
+				CurrentLean = 0;
 			}
 		}
 	}
@@ -1061,6 +1092,7 @@ void Afps_cppCharacter::Lean()
 	{
 		bLeanLeft = false;
 		bLeanRight = false;
+		CurrentLean = 0;
 	}
 }
 
@@ -1108,10 +1140,8 @@ void Afps_cppCharacter::EquipItem()
 								SetStatsToServer(data->Stats);
 								SetAnimStateServer(data->AnimState);
 							}
-							SetWeaponIcon(data->icon);
-							SetCurrentStats(data->Stats);
 							SetCurrentReloadAnimation(data->ReloadAnimation);
-							SetCurrentWeaponClass(data->WeaponClass);
+							SetWeaponIcon(data->icon);
 							SetWeaponType(data->Type);
 						}
 						else
@@ -1136,7 +1166,7 @@ void Afps_cppCharacter::FireProjectileToDirection()
 	FTransform MuzzlePoint = FPSWeaponBase->GetSocketTransform(FName("MuzzlePoint"));
 	MuzzlePointLocalLocation = MuzzlePoint.GetLocation();
 
-	FVector Start = FollowCamera->GetComponentLocation();
+	FVector Start = MuzzlePointLocalLocation;
 	FVector End = Start + FollowCamera->GetForwardVector() * bCurrentStats.Range;
 	FHitResult HitResult;
 
@@ -1401,17 +1431,6 @@ void Afps_cppCharacter::SpawnEmitterAtLocationServer_Implementation(UParticleSys
 	SpawnEmitterAtLocationMulticast(EmitterTemplate, Location, Rotation, Scale);
 }
 
-void Afps_cppCharacter::SetWeaponClass(TSubclassOf<AActor> WBase)
-{
-	if (HasAuthority())
-	{
-		SetWeaponClassMulticast(WBase);
-	}
-	else
-	{
-		SetWeaponClassServer(WBase);
-	}
-}
 
 void Afps_cppCharacter::SpawnActorToMulticast_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride)
 {
@@ -1433,9 +1452,10 @@ void Afps_cppCharacter::SpawnActorToServer_Implementation(TSubclassOf<AActor> Cl
 
 void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase)
 {
-	if (WeaponBase && WBase)
+	if (FPSWeaponBase && WeaponBase && WBase)
 	{
 		WeaponBase->SetChildActorClass(WBase);
+		FPSWeaponBase->SetChildActorClass(WBase);
 	}
 }
 
@@ -1499,8 +1519,8 @@ bool Afps_cppCharacter::SetStatsToServer_Validate(FWeaponStatsStruct CurrentStat
 
 void Afps_cppCharacter::PlayAnimMontageMulticast_Implementation(UAnimMontage* AnimMontage)
 {
-	PlayAnimMontage(AnimMontage);
-	FPSMesh->PlayAnimation(AnimMontage, false);
+	BodyMesh->GetAnimInstance()->Montage_Play(AnimMontage);
+	FPSMesh->GetAnimInstance()->Montage_Play(AnimMontage);
 }
 
 void Afps_cppCharacter::PlayAnimMontageServer_Implementation(UAnimMontage* AnimMontage) 
@@ -1774,7 +1794,7 @@ void Afps_cppCharacter::IF_GetLeftHandSocketTransform_Implementation(FTransform&
 		return;
 	}
 
-	if (!GetMesh()->DoesSocketExist(FName("GrapSocket")))
+	if (!BodyMesh->DoesSocketExist(FName("GrapSocket")))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Socket GrapSocket does not exist"));
 		return;
@@ -1783,7 +1803,7 @@ void Afps_cppCharacter::IF_GetLeftHandSocketTransform_Implementation(FTransform&
 	FTransform WeaponSocketTransform = WeaponMesh->GetSocketTransform(FName("LHIK"), RTS_World);
 	FVector OutPosition;
 	FRotator OutRotation;
-	GetMesh()->TransformToBoneSpace(FName("hand_r"), WeaponSocketTransform.GetLocation(), FRotator(WeaponSocketTransform.GetRotation()), OutPosition, OutRotation);
+	BodyMesh->TransformToBoneSpace(FName("hand_r"), WeaponSocketTransform.GetLocation(), FRotator(WeaponSocketTransform.GetRotation()), OutPosition, OutRotation);
 
 	OutTransform.SetLocation(OutPosition);
 	OutTransform.SetRotation(FQuat(OutRotation));
@@ -1795,7 +1815,7 @@ void Afps_cppCharacter::IF_GetLeftHandSocketTransform_FPS_Implementation(FTransf
 	AActor* FPSChildActor = FPSWeaponBase->GetChildActor();
 	if (!FPSChildActor)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("ChildActor is null"));
+		UE_LOG(LogTemp, Warning, TEXT("FPS_ChildActor is null"));
 		return;
 	}
 
