@@ -59,7 +59,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 		BodyMesh->SetSkeletalMeshAsset(PlayerMeshFinder.Object);
 	}
 
-	OriginCameraVector = FVector(0, 0, 0);
+	OriginCameraVector = FVector(3.734775f, 4.868312f, -6.625428);
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(BodyMesh, FName("neck_02"));
@@ -71,7 +71,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	WeaponBase->SetIsReplicated(true);
 	WeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
 
-	OriginMeshVector = FVector(-25.344501f, -13.573182f, -148.070772f);
+	OriginMeshVector = FVector(-19.762306f, -4.686809f, -147.949827f);
 
 	FPSMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FPSMesh"));
 	FPSMesh->SetupAttachment(FollowCamera);
@@ -247,7 +247,7 @@ void Afps_cppCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
-	FollowCamera->AttachToComponent(BodyMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("neck_02"));
+	FollowCamera->AttachToComponent(BodyMesh, FAttachmentTransformRules::KeepWorldTransform, FName("neck_02"));
 
 	if (IsLocallyControlled())
 	{
@@ -292,17 +292,6 @@ void Afps_cppCharacter::BeginPlay()
 		bAimTimeline.AddInterpFloat(bAimCurve, AimProgressFunction); 
 		bAimTimeline.SetLooping(false);
 		bAimTimeline.SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
-
-		UE_LOG(LogTemp, Log, TEXT("AimTimeline initialized with curve: %s"), *bAimCurve->GetName());
-		UFunction* Function = FindFunction(AimProgressFunction.GetFunctionName());
-		if (Function)
-		{
-			UE_LOG(LogTemp, Log, TEXT("Function found."));
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("Function not found."));
-		}
 	}
 
 	if (FollowCamera)
@@ -316,7 +305,7 @@ void Afps_cppCharacter::BeginPlay()
 void Afps_cppCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
+
 	GetWorldTimerManager().SetTimer(bTimerHandle_CheckWallTick, this, &Afps_cppCharacter::CheckWallTick, 0.02f, true);
 
 	bRecoilTimeline.TickTimeline(DeltaTime);
@@ -632,6 +621,18 @@ void Afps_cppCharacter::ControlAim(float Value)
 	{
 		FVector AimMeshVector = FVector(-77.216008f, -20.122222f, -148.070772f);
 		FVector AimCameraVector = FVector(55, 34, -12);
+		if (bLeanLeft && !bLeanRight)
+		{
+			AimMeshVector = FVector(-77.395527f, -16.55649f, -151.076056f);
+		}
+		else if (bLeanRight && !bLeanLeft)
+		{
+			AimMeshVector = FVector(-77.216014f, -23.006698f, -143.420085f);
+		}
+		else
+		{
+			AimMeshVector = FVector(-77.216008f, -20.122222f, -148.070772f);
+		}
 		if (FPSMesh && FPSMesh->IsValidLowLevel() &&
 			FollowCamera && FollowCamera->IsValidLowLevel())
 		{
@@ -1052,7 +1053,6 @@ void Afps_cppCharacter::Lean(const FInputActionValue& Value)
 		if (PlayerController)
 		{
 			float LeanValue = Value.Get<float>();
-
 			if (PlayerController->IsInputKeyDown(EKeys::Q))
 			{
 				if (HasAuthority())
