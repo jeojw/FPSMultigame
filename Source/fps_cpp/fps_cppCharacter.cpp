@@ -101,6 +101,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bIsAiming = false;
 	bStopLeftHandIK = false;
 	bIsAttacking = false;
+	bIsReloading = false;
 
 	GetCharacterMovement()->MaxWalkSpeed = 100.0f;
 
@@ -864,6 +865,7 @@ void Afps_cppCharacter::FireDelayCompleted()
 void Afps_cppCharacter::ReloadDelayCompleted()
 {
 	bIsAiming = true;
+	bIsReloading = false;
 
 	if (InventoryComponent && InventoryComponent->GetInventory().IsValidIndex(bCurrentItemSelection))
 	{
@@ -881,8 +883,9 @@ void Afps_cppCharacter::ReloadDelayCompleted()
 
 void Afps_cppCharacter::Reload()
 {
-	if (!bIsDead)
+	if (!bIsDead && !bIsReloading)
 	{
+		bIsReloading = true;
 		if (!InventoryComponent) {
 			UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
 			return;
@@ -1676,21 +1679,34 @@ void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum W
 	{
 		AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
 		if (M4)
+		{
 			M4->GetSkeletalMeshComponent()->PlayAnimation(M4->GetShotSequence(), false);
-
+			M4->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
+			M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+		}
+			
 		AWeapon_Base_M4* FM4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
 		if (FM4)
+		{
 			FM4->GetSkeletalMeshComponent()->PlayAnimation(FM4->GetShotSequence(), false);
+		}
+			
 	}
 	else if (WeaponType == EItemTypeEnum::Pistol)
 	{
 		AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
 		if (Pistol)
+		{
 			Pistol->GetSkeletalMeshComponent()->PlayAnimation(Pistol->GetShotSequence(), false);
-
+			Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
+			Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+		}
+			
 		AWeapon_Base_Pistol* FPistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
 		if (FPistol)
+		{
 			FPistol->GetSkeletalMeshComponent()->PlayAnimation(FPistol->GetShotSequence(), false);
+		}
 	}
 }
 
@@ -1710,21 +1726,33 @@ void Afps_cppCharacter::PlayReloadSequenceMulticast_Implementation(EItemTypeEnum
 	{
 		AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
 		if (M4)
+		{
 			M4->GetSkeletalMeshComponent()->PlayAnimation(M4->GetReloadSequence(), false);
+			M4->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
+			M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+		}
 
 		AWeapon_Base_M4* FM4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
 		if (FM4)
+		{
 			FM4->GetSkeletalMeshComponent()->PlayAnimation(FM4->GetReloadSequence(), false);
+		}
 	}
 	else if (WeaponType == EItemTypeEnum::Pistol)
 	{
 		AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
 		if (Pistol)
+		{
 			Pistol->GetSkeletalMeshComponent()->PlayAnimation(Pistol->GetReloadSequence(), false);
+			Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
+			Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+		}
 
 		AWeapon_Base_Pistol* FPistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
 		if (FPistol)
+		{
 			FPistol->GetSkeletalMeshComponent()->PlayAnimation(FPistol->GetReloadSequence(), false);
+		}
 	}
 }
 
