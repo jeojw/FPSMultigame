@@ -46,6 +46,8 @@ void UOptionWidget::NativeConstruct()
     }
 
     LoadOptions();
+
+    GameMode = Cast<Afps_cppGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 }
 
 void UOptionWidget::OnMasterVolumeChanged(float Value)

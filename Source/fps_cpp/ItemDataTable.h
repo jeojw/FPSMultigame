@@ -31,7 +31,7 @@ public:
     EItemTypeEnum Type;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TSubclassOf<AWeapon_Base> WeaponClass;
+    TSubclassOf<AActor> WeaponClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FWeaponStatsStruct Stats;

@@ -203,12 +203,6 @@ Afps_cppCharacter::Afps_cppCharacter()
 	{
 		MetalLandSoundCue = Finder4.Object;
 	}
-
-	static ConstructorHelpers::FClassFinder<UUserWidget> PlayerUIFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/PlayerMainUI"));
-	if (PlayerUIFinder.Succeeded())
-	{
-		PlayerUIWidgetClass = PlayerUIFinder.Class;
-	}
 }
 
 void Afps_cppCharacter::PostInitializeComponents()
@@ -250,20 +244,17 @@ void Afps_cppCharacter::BeginPlay()
 
 	FollowCamera->AttachToComponent(BodyMesh, FAttachmentTransformRules::KeepWorldTransform, FName("neck_02"));
 
-	if (IsLocallyControlled())
-	{
-		PlayerUIWidget = CreateWidget<UUserWidget>(UGameplayStatics::GetPlayerController(GetWorld(), 0), PlayerUIWidgetClass);
-
-		if (PlayerUIWidget)
-		{
-			PlayerUIWidget->AddToViewport();
-		}
-	}
-
 	if (FPSWeaponBase && WeaponBase)
 	{
-		FPSWeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
-		WeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
+		if (AActor* FPSChild = FPSWeaponBase->GetChildActor())
+		{
+			FPSChild->SetOwner(this);
+		}
+
+		if (AActor* Child = WeaponBase->GetChildActor())
+		{
+			Child->SetOwner(this);
+		}
 	}
 
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
@@ -637,13 +628,10 @@ void Afps_cppCharacter::ControlAim(float Value)
 		if (FPSMesh && FPSMesh->IsValidLowLevel() &&
 			FollowCamera && FollowCamera->IsValidLowLevel())
 		{
-			FVector NeckLocation = BodyMesh->GetBoneLocation(FName("neck_02"));
 			FVector NewMeshLocation = FMath::Lerp(OriginMeshVector, AimMeshVector, Value);
 			FVector NewCameraLocation = FMath::Lerp(OriginCameraVector, AimCameraVector, Value);
 			FPSMesh->SetRelativeLocation(NewMeshLocation);
 			FollowCamera->SetRelativeLocation(NewCameraLocation);
-
-			UE_LOG(LogTemp, Log, TEXT("CameraBoom location set to: %s"), *NeckLocation.ToString());
 		}
 	}
 	
@@ -1475,6 +1463,54 @@ void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActo
 	{
 		WeaponBase->SetChildActorClass(WBase);
 		FPSWeaponBase->SetChildActorClass(WBase);
+
+		AActor* WeaponBaseChild = WeaponBase->GetChildActor();
+		if (WeaponBaseChild)
+		{
+			WeaponBaseChild->SetOwner(this);
+			if (bWeaponType == EItemTypeEnum::Rifle)
+			{
+				AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
+				if (M4)
+				{
+					M4->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
+					M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+				}
+			}
+			else if (bWeaponType == EItemTypeEnum::Pistol)
+			{
+				AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
+				if (Pistol)
+				{
+					Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
+					Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+				}
+			}
+		}
+
+		AActor* FPSWeaponBaseChild = FPSWeaponBase->GetChildActor();
+		if (FPSWeaponBaseChild)
+		{
+			FPSWeaponBaseChild->SetOwner(this);
+			if (bWeaponType == EItemTypeEnum::Rifle)
+			{
+				AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
+				if (M4)
+				{
+					M4->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
+					M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
+				}
+			}
+			else if (bWeaponType == EItemTypeEnum::Pistol)
+			{
+				AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
+				if (Pistol)
+				{
+					Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
+					Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
+				}
+			}
+		}
 	}
 }
 
@@ -1689,6 +1725,8 @@ void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum W
 		if (FM4)
 		{
 			FM4->GetSkeletalMeshComponent()->PlayAnimation(FM4->GetShotSequence(), false);
+			FM4->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
+			FM4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
 		}
 			
 	}
@@ -1706,6 +1744,8 @@ void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum W
 		if (FPistol)
 		{
 			FPistol->GetSkeletalMeshComponent()->PlayAnimation(FPistol->GetShotSequence(), false);
+			FPistol->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
+			FPistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
 		}
 	}
 }

@@ -10,6 +10,7 @@
 #include "Components/ComboBoxString.h"
 #include "Components/CanvasPanel.h"
 #include "Components/TextBlock.h"
+#include "fps_cppGameMode.h"
 #include "OptionWidget.generated.h"
 
 /**
@@ -43,6 +44,9 @@ class FPS_CPP_API UOptionWidget : public UUserWidget
 
 	UPROPERTY(meta = (BindWidget))
 	UButton* CancleButton;
+
+	UPROPERTY()
+	Afps_cppGameMode* GameMode;
 
 protected:
 	virtual void NativeConstruct() override;

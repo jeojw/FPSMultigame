@@ -237,11 +237,6 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	FTimerHandle WalkTimerHandle;
 	FTimerHandle RunTimerHandle;
 
-	UUserWidget* PlayerUIWidget;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UUserWidget> PlayerUIWidgetClass;
-
 	float CurrentLean;
 
 	FVector OriginMeshVector;

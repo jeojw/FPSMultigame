@@ -5,8 +5,10 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerState.h"
+#include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
+#include "SaveOptions.h"
 
 Afps_cppGameMode::Afps_cppGameMode()
 {
@@ -25,10 +27,46 @@ Afps_cppGameMode::Afps_cppGameMode()
 		Player = PlayerPawnBPObjectFinder.Object;
 	}
 
+	static ConstructorHelpers::FClassFinder<UUserWidget> PlayerUIFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/PlayerMainUI"));
+	if (PlayerUIFinder.Succeeded())
+	{
+		PlayerUIWidgetClass = PlayerUIFinder.Class;
+	}
+
 	static ConstructorHelpers::FClassFinder<UUserWidget> StartWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_StartMenuWidget"));
 	if (StartWidgetFinder.Succeeded())
 	{
 		StartWidgetClass = StartWidgetFinder.Class;
+	}
+
+	static ConstructorHelpers::FClassFinder<UUserWidget> LoginWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_LoginWidget"));
+	if (LoginWidgetFinder.Succeeded())
+	{
+		LoginWidgetClass = LoginWidgetFinder.Class;
+	}
+
+	static ConstructorHelpers::FClassFinder<UUserWidget> SignupWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_SignupWidget"));
+	if (SignupWidgetFinder.Succeeded())
+	{
+		SignupWidgetClass = SignupWidgetFinder.Class;
+	}
+
+	static ConstructorHelpers::FClassFinder<UUserWidget> OptionWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_OptionWidget"));
+	if (OptionWidgetFinder.Succeeded())
+	{
+		OptionWidgetClass = OptionWidgetFinder.Class;
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundWave> StartBGMFinder(TEXT("/Game/FPS_BGM/Phat_Phrog_Studio_-_Dropship_Assault_-_Uprising_Protocol_-_LOOP"));
+	if (StartBGMFinder.Succeeded())
+	{
+		StartBGM = StartBGMFinder.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<USoundWave> GameRoomBGMFinder(TEXT("/Game/FPS_BGM/Phat_Phrog_Studio_-_Mecha_Conflict_-_Ironblood_Frontier_-_LOOP"));
+	if (GameRoomBGMFinder.Succeeded())
+	{
+		GameRoomBGM = GameRoomBGMFinder.Object;
 	}
 	
 	RespawnTime = 1.0f;
@@ -38,19 +76,62 @@ void Afps_cppGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	/*if (StartWidgetClass != nullptr)
+	if (PlayerUIWidgetClass)
 	{
-		CurrentWidget = CreateWidget<UUserWidget>(GetWorld(), StartWidgetClass);
-		if (StartWidgetClass != nullptr)
+		PlayerUIWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), PlayerUIWidgetClass);
+		if (PlayerUIWidgetInstance)
 		{
-			CurrentWidget->AddToViewport();
+			PlayerUIWidgetInstance->AddToViewport();
+			PlayerUIWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
 		}
-	}*/
+	}
 
-	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-	if (PlayerController)
+	if (StartWidgetClass)
 	{
-		PlayerController->Possess(Player);
+		StartWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), StartWidgetClass);
+		if (StartWidgetInstance)
+		{
+			StartWidgetInstance->AddToViewport();
+			StartWidgetInstance->SetVisibility(ESlateVisibility::Visible);
+			PauseGame();
+		}
+	}
+
+	if (LoginWidgetClass)
+	{
+		LoginWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), LoginWidgetClass);
+		if (LoginWidgetInstance)
+		{
+			LoginWidgetInstance->AddToViewport();
+			LoginWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
+
+	if (SignupWidgetClass)
+	{
+		SignupWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), SignupWidgetClass);
+		if (SignupWidgetInstance)
+		{
+			SignupWidgetInstance->AddToViewport();
+			SignupWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
+
+	if (OptionWidgetClass)
+	{
+		OptionWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), OptionWidgetClass);
+		if (OptionWidgetInstance)
+		{
+			OptionWidgetInstance->AddToViewport();
+			OptionWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
+
+	if (StartBGM)
+	{
+		USaveOptions* LoadOptionsInstance = Cast<USaveOptions>(UGameplayStatics::LoadGameFromSlot(TEXT("SettingsSlot"), 0));
+
+		UGameplayStatics::SpawnSound2D(GetWorld(), StartBGM, 1.0f, 1.0f, 0.0f, nullptr, true, true);
 	}
 
 	InitializeNetworkSettings();
@@ -63,6 +144,30 @@ void Afps_cppGameMode::Tick(float DeltaSeconds)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Respawn!!"));
 		Respawn();
+	}
+}
+
+void Afps_cppGameMode::PauseGame()
+{
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (PlayerController)
+	{
+		PlayerController->SetPause(true);
+		PlayerController->bShowMouseCursor = true;
+		PlayerController->bEnableClickEvents = true;
+		PlayerController->bEnableMouseOverEvents = true;
+	}
+}
+
+void Afps_cppGameMode::UnpauseGame()
+{
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (PlayerController)
+	{
+		PlayerController->SetPause(false);
+		PlayerController->bShowMouseCursor = false;
+		PlayerController->bEnableClickEvents = false;
+		PlayerController->bEnableMouseOverEvents = false;
 	}
 }
 
@@ -135,4 +240,40 @@ void Afps_cppGameMode::InitializeNetworkSettings()
 void Afps_cppGameMode::StartGame()
 {
 	
+}
+
+void Afps_cppGameMode::VisibleSignup()
+{
+	if (SignupWidgetInstance && StartWidgetInstance)
+	{
+		SignupWidgetInstance->SetVisibility(ESlateVisibility::Visible);
+		StartWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+void Afps_cppGameMode::VisibleLogin()
+{
+	if (LoginWidgetInstance && StartWidgetInstance)
+	{
+		LoginWidgetInstance->SetVisibility(ESlateVisibility::Visible);
+		StartWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+void Afps_cppGameMode::VisibleOption()
+{
+	if (OptionWidgetInstance && StartWidgetInstance)
+	{
+		OptionWidgetInstance->SetVisibility(ESlateVisibility::Visible);
+		StartWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+void Afps_cppGameMode::VisiblePlayerUI()
+{
+	if (LoginWidgetInstance && PlayerUIWidgetInstance)
+	{
+		PlayerUIWidgetInstance->SetVisibility(ESlateVisibility::Visible);
+		LoginWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+	}
 }
