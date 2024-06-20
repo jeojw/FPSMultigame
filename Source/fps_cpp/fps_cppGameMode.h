@@ -6,6 +6,7 @@
 #include "fps_cppCharacter.h"
 #include "Sound/SoundWave.h"
 #include "GameFramework/GameModeBase.h"
+#include "Components/AudioComponent.h"
 #include "fps_cppGameMode.generated.h"
 
 UCLASS(minimalapi)
@@ -46,6 +47,8 @@ public:
 	void Respawn();
 	void RespawnFunction();
 
+	void CreateDefaultSaveGame();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -82,6 +85,9 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	USoundWave* GameRoomBGM;
+
+	UPROPERTY()
+	UAudioComponent* StartBGMAudioComponent;
 
 	FTimerHandle RespawnTimerHandle;
 };

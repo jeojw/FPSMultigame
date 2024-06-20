@@ -8,5 +8,5 @@ USaveOptions::USaveOptions()
 	MasterVolumeValue = 0.7f;
 	EffectVolumeValue = 1.0f;
 	MusicVolumeValue = 1.0f;
-	TextureQualityValue = "High";
+	TextureQualityValue = TEXT("High");
 }

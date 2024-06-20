@@ -45,6 +45,11 @@ void UOptionWidget::NativeConstruct()
         ApplyButton->OnClicked.AddDynamic(this, &UOptionWidget::ApplyChangedOptions);
     }
 
+    if (CancelButton)
+    {
+        CancelButton->OnClicked.AddDynamic(this, &UOptionWidget::CancelChangedOptions);
+    }
+
     LoadOptions();
 
     GameMode = Cast<Afps_cppGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
@@ -109,14 +114,20 @@ void UOptionWidget::ApplyChangedOptions()
 {
     USaveOptions* SaveOptionsInstance = Cast<USaveOptions>(UGameplayStatics::LoadGameFromSlot(TEXT("SettingsSlot"), 0));
 
+    if (!SaveOptionsInstance)
+    {
+        SaveOptionsInstance = Cast<USaveOptions>(UGameplayStatics::CreateSaveGameObject(USaveOptions::StaticClass()));
+    }
+
     if (SaveOptionsInstance)
     {
-        SaveOptionsInstance->SetMaseterVolume(MasterVolumeSlider->GetValue());
+        SaveOptionsInstance->SetMasterVolume(MasterVolumeSlider->GetValue());
         SaveOptionsInstance->SetEffectVolume(EffectVolumeSlider->GetValue());
         SaveOptionsInstance->SetMusicVolume(MusicVolumeSlider->GetValue());
         SaveOptionsInstance->SetTextureQuality(TextureComboBox->GetSelectedOption());
 
-        UGameplayStatics::SaveGameToSlot(SaveOptionsInstance, TEXT("SettingSlot"), 0);
+        UGameplayStatics::SaveGameToSlot(SaveOptionsInstance, TEXT("SettingsSlot"), 0);
+
     }
 }
 
@@ -148,6 +159,8 @@ void UOptionWidget::LoadOptions()
         OnEffectsVolumeChanged(1.0f);
         OnMusicVolumeChanged(1.0f);
         TextureQualityChanged(TEXT("High"), ESelectInfo::Direct);
+
+        ApplyChangedOptions();
     }
 }
 

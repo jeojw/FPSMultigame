@@ -611,30 +611,16 @@ void Afps_cppCharacter::ControlAim(float Value)
 {
 	if (!bIsDead)
 	{
-		FVector AimMeshVector = FVector(-77.216008f, -20.122222f, -148.070772f);
-		FVector AimCameraVector = FVector(55, 34, -12);
-		if (bLeanLeft && !bLeanRight)
-		{
-			AimMeshVector = FVector(-77.395527f, -16.55649f, -151.076056f);
-		}
-		else if (bLeanRight && !bLeanLeft)
-		{
-			AimMeshVector = FVector(-77.216014f, -23.006698f, -143.420085f);
-		}
-		else
-		{
-			AimMeshVector = FVector(-77.216008f, -20.122222f, -148.070772f);
-		}
+		FVector AimMeshVector = FVector(OriginMeshVector.X, -20.05f, OriginMeshVector.Z);
 		if (FPSMesh && FPSMesh->IsValidLowLevel() &&
 			FollowCamera && FollowCamera->IsValidLowLevel())
 		{
 			FVector NewMeshLocation = FMath::Lerp(OriginMeshVector, AimMeshVector, Value);
-			FVector NewCameraLocation = FMath::Lerp(OriginCameraVector, AimCameraVector, Value);
+			float NewFieldOfView = FMath::Lerp(90.0f, 14.240001f, Value);
 			FPSMesh->SetRelativeLocation(NewMeshLocation);
-			FollowCamera->SetRelativeLocation(NewCameraLocation);
+			FollowCamera->SetFieldOfView(NewFieldOfView);
 		}
 	}
-	
 }
 
 void Afps_cppCharacter::ResetFireRifle()

@@ -6,9 +6,6 @@
 #include "GameFramework/SaveGame.h"
 #include "SaveOptions.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class FPS_CPP_API USaveOptions : public USaveGame
 {
@@ -30,7 +27,7 @@ public:
 	USaveOptions();
 
 	float GetMasterVolume() const { return MasterVolumeValue; }
-	void SetMaseterVolume(float _Volume) { MasterVolumeValue = _Volume; }
+	void SetMasterVolume(float _Volume) { MasterVolumeValue = _Volume; }
 
 	float GetEffectVolume() const { return EffectVolumeValue; }
 	void SetEffectVolume(float _Volume) { EffectVolumeValue = _Volume; }

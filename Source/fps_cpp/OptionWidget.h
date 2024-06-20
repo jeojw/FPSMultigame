@@ -43,7 +43,7 @@ class FPS_CPP_API UOptionWidget : public UUserWidget
 	UButton* ApplyButton;
 
 	UPROPERTY(meta = (BindWidget))
-	UButton* CancleButton;
+	UButton* CancelButton;
 
 	UPROPERTY()
 	Afps_cppGameMode* GameMode;
@@ -61,11 +61,15 @@ public:
 	UFUNCTION()
 	void OnEffectsVolumeChanged(float Value);
 
+	UFUNCTION()
+	void ApplyChangedOptions();
+
+	UFUNCTION()
+	void CancelChangedOptions();
+
 private:
 	void AdjustVolume(FName SoundClassName, float Volume);
 	void TextureQualityChanged(FString SelectedItem, ESelectInfo::Type SelectionType);
 
 	void LoadOptions();
-	void ApplyChangedOptions();
-	void CancelChangedOptions();
 };

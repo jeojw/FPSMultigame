@@ -8,8 +8,8 @@
 #include "Components/EditableText.h"
 #include "Components/Image.h"
 #include "Components/Button.h"
-#include "Components/CanvasPanel.h"
 #include "Components/TextBlock.h"
+#include "fps_cppGameMode.h"
 #include "LoginWidget.generated.h"
 
 /**
@@ -21,19 +21,7 @@ class FPS_CPP_API ULoginWidget : public UUserWidget
 	GENERATED_BODY()
 
 	UPROPERTY(meta = (BindWidget))
-	UCanvasPanel* UICanvas;
-
-	UPROPERTY(meta = (BindWidget))
-	UImage* BackgroundImage;
-
-	UPROPERTY(meta = (BindWidget))
-	UButton* LoginButton;
-
-	UPROPERTY(meta = (BindWidget))
-	UTextBlock* LoginButtonText;
-
-	UPROPERTY(meta = (BindWidget))
-	UTextBlock* Signin;
+	UButton* CheckLoginButton;
 
 	UPROPERTY(meta = (BindWidget))
 	UEditableText* InputID;
@@ -41,4 +29,13 @@ class FPS_CPP_API ULoginWidget : public UUserWidget
 	UPROPERTY(meta = (BindWidget))
 	UEditableText* InputPassword;
 	
+	UPROPERTY()
+	Afps_cppGameMode* GameMode;
+
+protected:
+	virtual void NativeConstruct() override;
+
+public:
+	UFUNCTION()
+	void CheckLogin();
 };

@@ -76,11 +76,17 @@ void Afps_cppGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!UGameplayStatics::DoesSaveGameExist(TEXT("SettingsSlot"), 0))
+	{
+		CreateDefaultSaveGame();
+	}
+
 	if (PlayerUIWidgetClass)
 	{
 		PlayerUIWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), PlayerUIWidgetClass);
 		if (PlayerUIWidgetInstance)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("UI is called"));
 			PlayerUIWidgetInstance->AddToViewport();
 			PlayerUIWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
 		}
@@ -131,7 +137,7 @@ void Afps_cppGameMode::BeginPlay()
 	{
 		USaveOptions* LoadOptionsInstance = Cast<USaveOptions>(UGameplayStatics::LoadGameFromSlot(TEXT("SettingsSlot"), 0));
 
-		UGameplayStatics::SpawnSound2D(GetWorld(), StartBGM, 1.0f, 1.0f, 0.0f, nullptr, true, true);
+		//StartBGMAudioComponent = UGameplayStatics::SpawnSound2D(GetWorld(), StartBGM, 1.0f, 1.0f, 0.0f, nullptr, true, true);
 	}
 
 	InitializeNetworkSettings();
@@ -144,6 +150,20 @@ void Afps_cppGameMode::Tick(float DeltaSeconds)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Respawn!!"));
 		Respawn();
+	}
+}
+
+void Afps_cppGameMode::CreateDefaultSaveGame()
+{
+	USaveOptions* SaveOptionsInstance = Cast<USaveOptions>(UGameplayStatics::CreateSaveGameObject(USaveOptions::StaticClass()));
+	if (SaveOptionsInstance)
+	{
+		SaveOptionsInstance->SetMasterVolume(0.7f);
+		SaveOptionsInstance->SetEffectVolume(1.0f);
+		SaveOptionsInstance->SetMusicVolume(1.0f);
+		SaveOptionsInstance->SetTextureQuality(TEXT("High"));
+
+		UGameplayStatics::SaveGameToSlot(SaveOptionsInstance, TEXT("SettingsSlot"), 0);
 	}
 }
 
@@ -168,6 +188,11 @@ void Afps_cppGameMode::UnpauseGame()
 		PlayerController->bShowMouseCursor = false;
 		PlayerController->bEnableClickEvents = false;
 		PlayerController->bEnableMouseOverEvents = false;
+
+		if (StartBGMAudioComponent)
+		{
+			StartBGMAudioComponent->Stop();
+		}
 	}
 }
 
@@ -275,5 +300,6 @@ void Afps_cppGameMode::VisiblePlayerUI()
 	{
 		PlayerUIWidgetInstance->SetVisibility(ESlateVisibility::Visible);
 		LoginWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+		UnpauseGame();
 	}
 }
