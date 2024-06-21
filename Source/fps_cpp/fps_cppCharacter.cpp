@@ -115,6 +115,12 @@ Afps_cppCharacter::Afps_cppCharacter()
 	Tags.Add(FName("Flesh"));
 	Tags.Add(FName("Player"));
 
+	M4Location = FVector(-6.916288f, 5.297911f, -1.021789f);
+	M4Rotation = FRotator(18.151713f, 82.151696f, -11.221878f);
+
+	PistolLocation = FVector(-6.916288f, 5.297911f, -1.021789f);
+	PistolRotation = FRotator(13.512249f, 94.096334f, -7.351546f);
+
 	static ConstructorHelpers::FObjectFinder< UInputMappingContext> IMC_DefualtFinder(TEXT("/Game/ThirdPerson/Input/IMC_Default"));
 	if (IMC_DefualtFinder.Succeeded())
 	{
@@ -611,13 +617,40 @@ void Afps_cppCharacter::ControlAim(float Value)
 {
 	if (!bIsDead)
 	{
-		FVector AimMeshVector = FVector(OriginMeshVector.X, -20.05f, OriginMeshVector.Z);
+		FVector AimMeshVector;
+		FVector AimWeaponVector;
+		FRotator AimWeaponRotator;
+		FVector OriginWeaponVector;
+		FRotator OriginWeaponRotator;
+		float AimFieldOfView;
+		if (bWeaponType == EItemTypeEnum::Rifle)
+		{
+			AimMeshVector = FVector(OriginMeshVector.X, -20.05f, OriginMeshVector.Z);
+			AimFieldOfView = 14.240001f;
+			AimWeaponVector = FPSWeaponBase->GetRelativeLocation();
+			AimWeaponRotator = FPSWeaponBase->GetRelativeRotation();
+			OriginWeaponVector = M4Location;
+			OriginWeaponRotator = M4Rotation;
+		}
+		else
+		{
+			AimMeshVector = OriginMeshVector;
+			AimFieldOfView = 21.359997f;
+			AimWeaponVector = FVector(-6.0f, 8.75f, 2.7f);
+			AimWeaponRotator = FRotator(11.0f, 94.0f, -8.0f);
+			OriginWeaponVector = PistolLocation;
+			OriginWeaponRotator = PistolRotation;
+		}
 		if (FPSMesh && FPSMesh->IsValidLowLevel() &&
 			FollowCamera && FollowCamera->IsValidLowLevel())
 		{
 			FVector NewMeshLocation = FMath::Lerp(OriginMeshVector, AimMeshVector, Value);
-			float NewFieldOfView = FMath::Lerp(90.0f, 14.240001f, Value);
+			FVector NewWeaponLocation = FMath::Lerp(OriginWeaponVector, AimWeaponVector, Value);
+			FRotator NewWeaponRotation = FMath::Lerp(OriginWeaponRotator, AimWeaponRotator, Value);
+			float NewFieldOfView = FMath::Lerp(90.0f, AimFieldOfView, Value);
 			FPSMesh->SetRelativeLocation(NewMeshLocation);
+			FPSWeaponBase->SetRelativeLocation(NewWeaponLocation);
+			FPSWeaponBase->SetRelativeRotation(NewWeaponRotation);
 			FollowCamera->SetFieldOfView(NewFieldOfView);
 		}
 	}
@@ -1480,6 +1513,8 @@ void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActo
 			FPSWeaponBaseChild->SetOwner(this);
 			if (bWeaponType == EItemTypeEnum::Rifle)
 			{
+				FPSWeaponBase->SetRelativeLocation(M4Location);
+				FPSWeaponBase->SetRelativeRotation(M4Rotation);
 				AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
 				if (M4)
 				{
@@ -1489,6 +1524,8 @@ void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActo
 			}
 			else if (bWeaponType == EItemTypeEnum::Pistol)
 			{
+				FPSWeaponBase->SetRelativeLocation(PistolLocation);
+				FPSWeaponBase->SetRelativeRotation(PistolRotation);
 				AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
 				if (Pistol)
 				{

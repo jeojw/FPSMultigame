@@ -241,6 +241,13 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	FVector OriginMeshVector;
 	FVector OriginCameraVector;
+
+	FVector M4Location;
+	FRotator M4Rotation;
+
+	FVector PistolLocation;
+	FRotator PistolRotation;
+
 public:
 	Afps_cppCharacter();
 
