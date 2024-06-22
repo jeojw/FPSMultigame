@@ -11,10 +11,10 @@ void ULoginWidget::NativeConstruct()
 		CheckLoginButton->OnClicked.AddDynamic(this, &ULoginWidget::CheckLogin);
 	}
 	
-	GameMode = Cast<Afps_cppGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	PlayerController = Cast<Afps_cppPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
 }
 
 void ULoginWidget::CheckLogin()
 {
-	GameMode->VisiblePlayerUI();
+	PlayerController->VisiblePlayerUI();
 }

@@ -5,32 +5,75 @@
 #include "fps_cppCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetRenderingLibrary.h"
+#include "fps_cppGameMode.h"
 #include "CanvasItem.h"
 
 void UPlayerWidget::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    Player = Cast<Afps_cppCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
-
-    // 위젯 변수 초기화
-    PlayerHealth = Player->GetHealth();  // 예시 값
-    CurItem = Player->GetWeaponType();  // EItemTypeEnum의 초기값 설정
-    CurItemSelection = Player->GetCurrentItemSelection();
-    CurPistols = Player->GetInventory()->GetCurBullet(CurItemSelection);
-    CurWeaponIcon = LoadObject<UPaperSprite>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/Weapons/Weapon_Icons/Weapon_Icon_WeaponIcon_12"));
-
-    DeathMessage->SetVisibility(ESlateVisibility::Hidden);
-    RespawnBar->SetVisibility(ESlateVisibility::Hidden);
-
+    // UI 요소 초기화
     if (HpBar)
     {
         HpBar->SetPercent(1.0f);  // HP 바를 100%로 초기화
     }
-
     if (CurBulletCounts)
     {
-        CurBulletCounts->SetText(FText::FromString(FString::FromInt(CurPistols)));  // 초기 총알 개수 설정
+        CurBulletCounts->SetText(FText::FromString("0"));  // 초기 총알 개수 설정
+    }
+    if (DeathMessage)
+    {
+        DeathMessage->SetVisibility(ESlateVisibility::Hidden);
+    }
+    if (RespawnBar)
+    {
+        RespawnBar->SetVisibility(ESlateVisibility::Hidden);
+    }
+
+    // 딜레이를 주고 플레이어 캐릭터를 가져옴
+    FetchPlayerCharacter();
+}
+
+void UPlayerWidget::FetchPlayerCharacter()
+{
+    // 타이머를 사용하여 약간의 지연 후에 플레이어 캐릭터를 가져옴
+    FTimerHandle UnusedHandle;
+    GetWorld()->GetTimerManager().SetTimer(UnusedHandle, this, &UPlayerWidget::UpdatePlayerState, 1.0f, false);
+}
+
+void UPlayerWidget::UpdatePlayerState()
+{
+    // PlayerCharacter를 가져옴
+    ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+    Player = Cast<Afps_cppCharacter>(PlayerCharacter);
+
+    // Player가 Null인지 확인
+    if (Player)
+    {
+        PlayerHealth = Player->GetHealth();  // 예시 값
+        CurItem = Player->GetWeaponType();  // EItemTypeEnum의 초기값 설정
+        CurItemSelection = Player->GetCurrentItemSelection();
+        CurPistols = Player->GetInventory()->GetCurBullet(CurItemSelection);
+        CurWeaponIcon = LoadObject<UPaperSprite>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/Weapons/Weapon_Icons/Weapon_Icon_WeaponIcon_12"));
+
+        if (CurBulletCounts)
+        {
+            CurBulletCounts->SetText(FText::FromString(FString::FromInt(CurPistols)));  // 초기 총알 개수 설정
+        }
+    }
+    else
+    {
+        // Player가 Null인 경우 경고 로그 출력 및 재시도
+        UE_LOG(LogTemp, Warning, TEXT("Player is null in UpdatePlayerHealth, retrying..."));
+        PlayerHealth = 0.0f;  // 예시 값으로 초기화
+        if (CurBulletCounts)
+        {
+            CurBulletCounts->SetText(FText::FromString("0"));
+        }
+
+        // 재시도: 타이머를 사용하여 다시 시도
+        FTimerHandle RetryHandle;
+        GetWorld()->GetTimerManager().SetTimer(RetryHandle, this, &UPlayerWidget::UpdatePlayerState, 1.0f, false);
     }
 }
 

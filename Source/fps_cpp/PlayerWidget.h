@@ -65,6 +65,9 @@ class FPS_CPP_API UPlayerWidget : public UUserWidget
 	EItemTypeEnum CurItem;
 	int CurPistols;
 
+	void FetchPlayerCharacter();
+	void UpdatePlayerState();
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;

@@ -33,6 +33,7 @@ AWeapon_Base::AWeapon_Base()
 	if (SkeletalMeshAsset.Succeeded())
 	{
 		SkeletalMesh->SetSkeletalMesh(SkeletalMeshAsset.Object);
+		AimSocketTransform = SkeletalMesh->GetSocketTransform(FName("AimSocket"));
 	}
 	else
 	{

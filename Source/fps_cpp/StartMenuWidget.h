@@ -8,7 +8,7 @@
 #include "Components/Image.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
-#include "fps_cppGameMode.h"
+#include "fps_cppPlayerController.h"
 #include "StartMenuWidget.generated.h"
 
 /**
@@ -29,7 +29,7 @@ class FPS_CPP_API UStartMenuWidget : public UUserWidget
 	UButton* OptionButton;
 
 	UPROPERTY()
-	Afps_cppGameMode* GameMode;
+	Afps_cppPlayerController* PlayerController;
 
 protected:
 	virtual void NativeConstruct() override;

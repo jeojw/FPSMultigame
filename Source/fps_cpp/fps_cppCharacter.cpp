@@ -20,6 +20,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Weapon_Base_Pistol.h"
 #include "Weapon_Base_M4.h"
+#include "fps_cppPlayerController.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -39,7 +40,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->MaxWalkSpeed = 600.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
@@ -103,7 +104,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bIsAttacking = false;
 	bIsReloading = false;
 
-	GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+	GetCharacterMovement()->MaxWalkSpeed = 350.0f;
 
 	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
 
@@ -119,7 +120,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	M4Rotation = FRotator(18.151713f, 82.151696f, -11.221878f);
 
 	PistolLocation = FVector(-6.916288f, 5.297911f, -1.021789f);
-	PistolRotation = FRotator(13.512249f, 94.096334f, -7.351546f);
+	PistolRotation = FRotator(13.512249f, 82.151696f, -7.351546f);
 
 	static ConstructorHelpers::FObjectFinder< UInputMappingContext> IMC_DefualtFinder(TEXT("/Game/ThirdPerson/Input/IMC_Default"));
 	if (IMC_DefualtFinder.Succeeded())
@@ -263,7 +264,7 @@ void Afps_cppCharacter::BeginPlay()
 		}
 	}
 
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	Afps_cppPlayerController* PlayerController = Cast<Afps_cppPlayerController>(GetController());
 	if (PlayerController)
 	{
 		UE_LOG(LogTemp, Log, TEXT("BeginPlay: Character controlled by PlayerController"));
@@ -342,12 +343,10 @@ void Afps_cppCharacter::Tick(float DeltaTime)
 				GetWorld()->GetTimerManager().ClearTimer(WalkTimerHandle);
 				if (HasAuthority())
 				{
-					UE_LOG(LogTemp, Warning, TEXT("Server: Running sound triggered"));
 					PlaySoundWithCooldownMulticast(GetActorLocation(), MetalRunSoundCue, 0.3f);
 				}
 				else
 				{
-					UE_LOG(LogTemp, Warning, TEXT("Client: Running sound request sent to server"));
 					PlaySoundWithCooldownServer(GetActorLocation(), MetalRunSoundCue, 0.3f);
 				}
 			}
@@ -415,7 +414,7 @@ void Afps_cppCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	// Add Input Mapping Context
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	Afps_cppPlayerController* PlayerController = Cast<Afps_cppPlayerController>(GetController());
 	if (PlayerController != nullptr)
 	{
 		UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
@@ -575,7 +574,7 @@ void Afps_cppCharacter::StopSprint()
 		{
 			if (GetCharacterMovement())
 			{
-				GetCharacterMovement()->MaxWalkSpeed = 100.0f;
+				GetCharacterMovement()->MaxWalkSpeed = 350.0f;
 			}
 		}
 		else
@@ -587,7 +586,7 @@ void Afps_cppCharacter::StopSprint()
 
 void Afps_cppCharacter::ApplyRecoil(float PitchValue, float YawValue)
 {
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	Afps_cppPlayerController* PlayerController = Cast<Afps_cppPlayerController>(GetController());
 	float SelectFloat_1 = bIsAiming ? -0.25f : -1.0f;
 	float SelectFloat_2 = bIsAiming ? 1.0f : 2.5f;
 	if (PlayerController)
@@ -1033,7 +1032,7 @@ void Afps_cppCharacter::SwitchWeapon()
 {
 	if (!bIsDead)
 	{
-		APlayerController* PlayerController = Cast<APlayerController>(GetController());
+		Afps_cppPlayerController* PlayerController = Cast<Afps_cppPlayerController>(GetController());
 		if (PlayerController)
 		{
 			if (PlayerController->IsInputKeyDown(EKeys::One))
@@ -1059,7 +1058,7 @@ void Afps_cppCharacter::Lean(const FInputActionValue& Value)
 {
 	if (!bIsDead)
 	{
-		APlayerController* PlayerController = Cast<APlayerController>(GetController());
+		Afps_cppPlayerController* PlayerController = Cast<Afps_cppPlayerController>(GetController());
 		if (PlayerController)
 		{
 			float LeanValue = Value.Get<float>();
@@ -1367,7 +1366,7 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 void Afps_cppCharacter::DeleteItemServer_Implementation(AActor* DeleteItem)
 {
 	if (GetLocalRole() < ROLE_Authority) {
-		APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+		Afps_cppPlayerController* PlayerController = Cast<Afps_cppPlayerController>(GetController());
 
 		if (IPlayerInterface* playerInterface = Cast<IPlayerInterface>(PlayerController->GetCharacter())) {
 			playerInterface->Server_DeleteItem(DeleteItem);

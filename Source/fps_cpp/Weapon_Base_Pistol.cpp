@@ -10,6 +10,8 @@ AWeapon_Base_Pistol::AWeapon_Base_Pistol() : AWeapon_Base()
 	if (SkeletalMeshAsset.Succeeded())
 	{
 		SkeletalMesh->SetSkeletalMesh(SkeletalMeshAsset.Object);
+		SkeletalMesh->SetSkeletalMesh(SkeletalMeshAsset.Object);
+		AimSocketTransform = SkeletalMesh->GetSocketTransform(FName("AimSocket"));
 	}
 
 	static ConstructorHelpers::FObjectFinder<UAnimSequence> ShotSequenceFinder(TEXT("/Game/MilitaryWeapSilver/Weapons/Animations/Fire_Pistol_W"));

@@ -21,20 +21,20 @@ void UStartMenuWidget::NativeConstruct()
 		OptionButton->OnClicked.AddDynamic(this, &UStartMenuWidget::GoToOption);
 	}
 
-	GameMode = Cast<Afps_cppGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	PlayerController = Cast<Afps_cppPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
 }
 
 void UStartMenuWidget::GoToSignup()
 {
-	GameMode->VisibleSignup();
+	PlayerController->VisibleSignup();
 }
 
 void UStartMenuWidget::GoToLogin()
 {
-	GameMode->VisibleLogin();
+	PlayerController->VisibleLogin();
 }
 
 void UStartMenuWidget::GoToOption()
 {
-	GameMode->VisibleOption();
+	PlayerController->VisibleOption();
 }

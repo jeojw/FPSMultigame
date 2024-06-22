@@ -17,32 +17,10 @@ class Afps_cppGameMode : public AGameModeBase
 	UPROPERTY()
 	float RespawnTime;
 
-	UPROPERTY(EditAnywhere, Category = "UI")
-	TSubclassOf<UUserWidget> PlayerUIWidgetClass;
-
-	UPROPERTY(EditAnywhere, Category = "UI")
-	TSubclassOf<UUserWidget> StartWidgetClass;
-
-	UPROPERTY(EditAnywhere, Category = "UI")
-	TSubclassOf<UUserWidget> LoginWidgetClass;
-
-	UPROPERTY(EditAnywhere, Category = "UI")
-	TSubclassOf<UUserWidget> SignupWidgetClass;
-
-	UPROPERTY(EditAnywhere, Category = "UI")
-	TSubclassOf<UUserWidget> OptionWidgetClass;
-
 public:
 	Afps_cppGameMode();
 
 	void StartGame();
-	void VisibleSignup();
-	void VisibleLogin();
-	void VisibleOption();
-	void VisiblePlayerUI();
-
-	void PauseGame();
-	void UnpauseGame();
 	
 	void Respawn();
 	void RespawnFunction();
@@ -64,21 +42,6 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	Afps_cppCharacter* Player;
-
-	UPROPERTY(EditAnywhere)
-	UUserWidget* PlayerUIWidgetInstance;
-
-	UPROPERTY(EditAnywhere)
-	UUserWidget* SignupWidgetInstance;
-
-	UPROPERTY(EditAnywhere)
-	UUserWidget* LoginWidgetInstance;
-
-	UPROPERTY(EditAnywhere)
-	UUserWidget* StartWidgetInstance;
-
-	UPROPERTY(EditAnywhere)
-	UUserWidget* OptionWidgetInstance;
 
 	UPROPERTY(EditAnywhere)
 	USoundWave* StartBGM;

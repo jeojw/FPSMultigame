@@ -9,10 +9,13 @@
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 #include "SaveOptions.h"
+#include "fps_cppPlayerController.h"
 
-Afps_cppGameMode::Afps_cppGameMode()
+Afps_cppGameMode::Afps_cppGameMode() : AGameModeBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	PlayerControllerClass = Afps_cppPlayerController::StaticClass();
 	// set default pawn class to our Blueprinted character
 	static ConstructorHelpers::FClassFinder<Afps_cppCharacter> PlayerPawnBPClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
 	if (PlayerPawnBPClassFinder.Succeeded())
@@ -25,36 +28,6 @@ Afps_cppGameMode::Afps_cppGameMode()
 	if (PlayerPawnBPObjectFinder.Succeeded())
 	{
 		Player = PlayerPawnBPObjectFinder.Object;
-	}
-
-	static ConstructorHelpers::FClassFinder<UUserWidget> PlayerUIFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/PlayerMainUI"));
-	if (PlayerUIFinder.Succeeded())
-	{
-		PlayerUIWidgetClass = PlayerUIFinder.Class;
-	}
-
-	static ConstructorHelpers::FClassFinder<UUserWidget> StartWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_StartMenuWidget"));
-	if (StartWidgetFinder.Succeeded())
-	{
-		StartWidgetClass = StartWidgetFinder.Class;
-	}
-
-	static ConstructorHelpers::FClassFinder<UUserWidget> LoginWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_LoginWidget"));
-	if (LoginWidgetFinder.Succeeded())
-	{
-		LoginWidgetClass = LoginWidgetFinder.Class;
-	}
-
-	static ConstructorHelpers::FClassFinder<UUserWidget> SignupWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_SignupWidget"));
-	if (SignupWidgetFinder.Succeeded())
-	{
-		SignupWidgetClass = SignupWidgetFinder.Class;
-	}
-
-	static ConstructorHelpers::FClassFinder<UUserWidget> OptionWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_OptionWidget"));
-	if (OptionWidgetFinder.Succeeded())
-	{
-		OptionWidgetClass = OptionWidgetFinder.Class;
 	}
 
 	static ConstructorHelpers::FObjectFinder<USoundWave> StartBGMFinder(TEXT("/Game/FPS_BGM/Phat_Phrog_Studio_-_Dropship_Assault_-_Uprising_Protocol_-_LOOP"));
@@ -79,58 +52,6 @@ void Afps_cppGameMode::BeginPlay()
 	if (!UGameplayStatics::DoesSaveGameExist(TEXT("SettingsSlot"), 0))
 	{
 		CreateDefaultSaveGame();
-	}
-
-	if (PlayerUIWidgetClass)
-	{
-		PlayerUIWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), PlayerUIWidgetClass);
-		if (PlayerUIWidgetInstance)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("UI is called"));
-			PlayerUIWidgetInstance->AddToViewport();
-			PlayerUIWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
-		}
-	}
-
-	if (StartWidgetClass)
-	{
-		StartWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), StartWidgetClass);
-		if (StartWidgetInstance)
-		{
-			StartWidgetInstance->AddToViewport();
-			StartWidgetInstance->SetVisibility(ESlateVisibility::Visible);
-			PauseGame();
-		}
-	}
-
-	if (LoginWidgetClass)
-	{
-		LoginWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), LoginWidgetClass);
-		if (LoginWidgetInstance)
-		{
-			LoginWidgetInstance->AddToViewport();
-			LoginWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
-		}
-	}
-
-	if (SignupWidgetClass)
-	{
-		SignupWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), SignupWidgetClass);
-		if (SignupWidgetInstance)
-		{
-			SignupWidgetInstance->AddToViewport();
-			SignupWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
-		}
-	}
-
-	if (OptionWidgetClass)
-	{
-		OptionWidgetInstance = CreateWidget<UUserWidget>(GetWorld(), OptionWidgetClass);
-		if (OptionWidgetInstance)
-		{
-			OptionWidgetInstance->AddToViewport();
-			OptionWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
-		}
 	}
 
 	if (StartBGM)
@@ -167,38 +88,15 @@ void Afps_cppGameMode::CreateDefaultSaveGame()
 	}
 }
 
-void Afps_cppGameMode::PauseGame()
-{
-	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	if (PlayerController)
-	{
-		PlayerController->SetPause(true);
-		PlayerController->bShowMouseCursor = true;
-		PlayerController->bEnableClickEvents = true;
-		PlayerController->bEnableMouseOverEvents = true;
-	}
-}
-
-void Afps_cppGameMode::UnpauseGame()
-{
-	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	if (PlayerController)
-	{
-		PlayerController->SetPause(false);
-		PlayerController->bShowMouseCursor = false;
-		PlayerController->bEnableClickEvents = false;
-		PlayerController->bEnableMouseOverEvents = false;
-
-		if (StartBGMAudioComponent)
-		{
-			StartBGMAudioComponent->Stop();
-		}
-	}
-}
-
 void Afps_cppGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
+
+	Afps_cppPlayerController* MyPlayerController = Cast<Afps_cppPlayerController>(NewPlayer);
+	if (MyPlayerController)
+	{
+		MyPlayerController->ClientInitializeUI();
+	}
 
 	//FVector SpawnLocation(1000.0f, 600.0f, 0.0f);
 	//FRotator SpawnRotation(0.0f, 0.0f, 0.0f);
@@ -265,41 +163,4 @@ void Afps_cppGameMode::InitializeNetworkSettings()
 void Afps_cppGameMode::StartGame()
 {
 	
-}
-
-void Afps_cppGameMode::VisibleSignup()
-{
-	if (SignupWidgetInstance && StartWidgetInstance)
-	{
-		SignupWidgetInstance->SetVisibility(ESlateVisibility::Visible);
-		StartWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
-	}
-}
-
-void Afps_cppGameMode::VisibleLogin()
-{
-	if (LoginWidgetInstance && StartWidgetInstance)
-	{
-		LoginWidgetInstance->SetVisibility(ESlateVisibility::Visible);
-		StartWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
-	}
-}
-
-void Afps_cppGameMode::VisibleOption()
-{
-	if (OptionWidgetInstance && StartWidgetInstance)
-	{
-		OptionWidgetInstance->SetVisibility(ESlateVisibility::Visible);
-		StartWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
-	}
-}
-
-void Afps_cppGameMode::VisiblePlayerUI()
-{
-	if (LoginWidgetInstance && PlayerUIWidgetInstance)
-	{
-		PlayerUIWidgetInstance->SetVisibility(ESlateVisibility::Visible);
-		LoginWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
-		UnpauseGame();
-	}
 }

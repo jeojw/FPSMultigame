@@ -24,7 +24,7 @@ protected:
 	USceneComponent* AimOffset_RedDot;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FTransform bSocketTransform;
+	FTransform AimSocketTransform;
 
 	UPROPERTY(EditAnywhere)
 	UAnimSequence* ShotSequence;
