@@ -21,6 +21,7 @@
 #include "Components/TimelineComponent.h"
 #include "PaperSprite.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/ArrowComponent.h"
 #include "fps_cppCharacter.generated.h"
 
 
@@ -39,6 +40,9 @@ UCLASS(config = Game)
 class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 {
 	GENERATED_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	USpringArmComponent* CameraBoom;
 
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -240,7 +244,6 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	float CurrentLean;
 
 	FVector OriginMeshVector;
-	FVector OriginCameraVector;
 
 	FVector M4Location;
 	FRotator M4Rotation;

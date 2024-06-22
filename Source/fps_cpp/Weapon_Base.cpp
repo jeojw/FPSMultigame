@@ -66,3 +66,12 @@ void AWeapon_Base::GetShellTransform_Implementation(FTransform& T)
 		T = SocketTransform;
 	}
 }
+
+void AWeapon_Base::GetAimSocketTransform_Implementation(FTransform& T)
+{
+	if (SkeletalMesh)
+	{
+		FTransform SocketTransform = SkeletalMesh->GetSocketTransform(FName("AimSocket"));
+		T = SocketTransform;
+	}
+}

@@ -23,5 +23,8 @@ class FPS_CPP_API IGunInterface
 public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
 	void GetShellTransform(FTransform& T);
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	void GetAimSocketTransform(FTransform& T);
 };
 

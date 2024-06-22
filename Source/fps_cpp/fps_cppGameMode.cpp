@@ -16,19 +16,19 @@ Afps_cppGameMode::Afps_cppGameMode() : AGameModeBase()
 	PrimaryActorTick.bCanEverTick = true;
 
 	PlayerControllerClass = Afps_cppPlayerController::StaticClass();
-	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<Afps_cppCharacter> PlayerPawnBPClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
+	/*static ConstructorHelpers::FClassFinder<Afps_cppCharacter> PlayerPawnBPClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
 	if (PlayerPawnBPClassFinder.Succeeded())
 	{
 		PlayerPawnBPClass = PlayerPawnBPClassFinder.Class;
 		DefaultPawnClass = PlayerPawnBPClass;
-	}
+	}*/
+	DefaultPawnClass = Afps_cppCharacter::StaticClass();
 
-	static ConstructorHelpers::FObjectFinder<Afps_cppCharacter> PlayerPawnBPObjectFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
+	/*static ConstructorHelpers::FObjectFinder<Afps_cppCharacter> PlayerPawnBPObjectFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
 	if (PlayerPawnBPObjectFinder.Succeeded())
 	{
 		Player = PlayerPawnBPObjectFinder.Object;
-	}
+	}*/
 
 	static ConstructorHelpers::FObjectFinder<USoundWave> StartBGMFinder(TEXT("/Game/FPS_BGM/Phat_Phrog_Studio_-_Dropship_Assault_-_Uprising_Protocol_-_LOOP"));
 	if (StartBGMFinder.Succeeded())
@@ -96,6 +96,8 @@ void Afps_cppGameMode::PostLogin(APlayerController* NewPlayer)
 	if (MyPlayerController)
 	{
 		MyPlayerController->ClientInitializeUI();
+
+		Player = Cast<Afps_cppCharacter>(MyPlayerController->GetPawn());
 	}
 
 	//FVector SpawnLocation(1000.0f, 600.0f, 0.0f);

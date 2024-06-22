@@ -52,6 +52,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	BodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BodyMesh"));
 	BodyMesh->SetupAttachment(RootComponent);
+	BodyMesh->SetRelativeLocationAndRotation(FVector(0, 0, -90.0f), FQuat(FRotator(0, -90.0f, 0)));
 	BodyMesh->SetOwnerNoSee(true);
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> PlayerMeshFinder(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny"));
@@ -60,15 +61,20 @@ Afps_cppCharacter::Afps_cppCharacter()
 		BodyMesh->SetSkeletalMeshAsset(PlayerMeshFinder.Object);
 	}
 
-	OriginCameraVector = FVector(3.734775f, 4.868312f, -6.625428);
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+	CameraBoom->SetupAttachment(BodyMesh, FName("neck_02"));
+	CameraBoom->TargetArmLength = 0.0f;
+	CameraBoom->bUsePawnControlRotation = true;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(BodyMesh, FName("neck_02"));
-	FollowCamera->bUsePawnControlRotation = true;
-	FollowCamera->SetRelativeLocation(OriginCameraVector);
+	FollowCamera->SetupAttachment(CameraBoom);
+	FollowCamera->bUsePawnControlRotation = false;
+	FollowCamera->SetRelativeLocation(FVector(0, 0, 0));
+	FollowCamera->SetRelativeRotation(FQuat(FRotator(0, 0, 0)));
 
 	WeaponBase = CreateDefaultSubobject<UChildActorComponent>(TEXT("WeaponBase"));
 	WeaponBase->SetupAttachment(BodyMesh, FName(TEXT("WeaponSocket")));
+	WeaponBase->SetRelativeLocationAndRotation(FVector(-5.71417f, 2.633132f, -2.075797f), FQuat(FRotator(14.103956f, 91.855026f, -8.38177f)));
 	WeaponBase->SetIsReplicated(true);
 	WeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
 
@@ -78,7 +84,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	FPSMesh->SetupAttachment(FollowCamera);
 	FPSMesh->SetOnlyOwnerSee(true);
 	FPSMesh->SetCastShadow(false);
-	FPSMesh->SetRelativeLocation(OriginMeshVector);
+	FPSMesh->SetRelativeLocationAndRotation(OriginMeshVector, FQuat(FRotator(0, -90.0f, 0)));
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FPSMeshFinder(TEXT("/Game/Characters/Mannequins/Meshes/SK_Mannequin_Arms"));
 	if (FPSMeshFinder.Succeeded())
@@ -88,6 +94,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	FPSWeaponBase = CreateDefaultSubobject<UChildActorComponent>(TEXT("FPSWeaponBase"));
 	FPSWeaponBase->SetupAttachment(FPSMesh, FName(TEXT("WeaponSocket")));
+	FPSWeaponBase->SetRelativeLocationAndRotation(FVector(-6.916288f, 5.297911f, -1.021789f), FQuat(FRotator(13.512249f, 94.096334f, -7.351546f)));
 	FPSWeaponBase->SetIsReplicated(true);
 	FPSWeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
 
@@ -188,7 +195,69 @@ Afps_cppCharacter::Afps_cppCharacter()
 		StoneImpactParticleSystem = StoneImpactFinder.Object;
 	}
 
+//------------------------------------------------------------------------ input actions
+	
+	static ConstructorHelpers::FObjectFinder<UInputAction> JumpActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Jump"));
+	if (JumpActionAsset.Succeeded())
+	{
+		JumpAction = JumpActionAsset.Object;
+	}
 
+	static ConstructorHelpers::FObjectFinder<UInputAction> MoveActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Move"));
+	if (MoveActionAsset.Succeeded())
+	{
+		MoveAction = MoveActionAsset.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction> DropActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_DropItem"));
+	if (DropActionAsset.Succeeded())
+	{
+		DropItemAction = DropActionAsset.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>SprintActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Sprint"));
+	if (SprintActionAsset.Succeeded())
+	{
+		SprintAction = SprintActionAsset.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>SwitchActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Switch"));
+	if (SwitchActionAsset.Succeeded())
+	{
+		SwitchAction = SwitchActionAsset.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>LeanActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Lean"));
+	if (LeanActionAsset.Succeeded())
+	{
+		LeanAction = LeanActionAsset.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>AimActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Aim"));
+	if (AimActionAsset.Succeeded())
+	{
+		AimAction = AimActionAsset.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>LookActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Look"));
+	if (LookActionAsset.Succeeded())
+	{
+		LookAction = LookActionAsset.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>FireActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Fire"));
+	if (FireActionAsset.Succeeded())
+	{
+		FireAction = FireActionAsset.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction>ReloadActionAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Reload"));
+	if (ReloadActionAsset.Succeeded())
+	{
+		ReloadAction = ReloadActionAsset.Object;
+	}
+
+//------------------------------------------------------------------------
 
 	static ConstructorHelpers::FObjectFinder<USoundCue> Finder1(TEXT("/Game/FootStepSound/Footsteps_Metal/Footsteps_Metal_Walk/Metal_Walk_Cue_1"));
 	if (Finder1.Succeeded())
@@ -221,6 +290,16 @@ void Afps_cppCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
+	Afps_cppPlayerController* PlayerController = Cast<Afps_cppPlayerController>(NewController);
+	if (PlayerController != nullptr)
+	{
+		UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+		if (Subsystem != nullptr)
+		{
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+		}
+	}
+
 	// 소유권 설정
 	//if (APlayerController* PC = Cast<APlayerController>(NewController))
 	//{
@@ -249,8 +328,6 @@ void Afps_cppCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
-	FollowCamera->AttachToComponent(BodyMesh, FAttachmentTransformRules::KeepWorldTransform, FName("neck_02"));
-
 	if (FPSWeaponBase && WeaponBase)
 	{
 		if (AActor* FPSChild = FPSWeaponBase->GetChildActor())
@@ -273,6 +350,12 @@ void Afps_cppCharacter::BeginPlay()
 		// Initialize the PlayerInterface
 		PlayerInterface.SetInterface(Cast<IPlayerInterface>(this));
 		PlayerInterface.SetObject(this);
+
+		UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
+		if (Subsystem != nullptr)
+		{
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+		}
 	}
 
 	if (bRecoilCurve)
@@ -1558,7 +1641,8 @@ void Afps_cppCharacter::StopLeftHandIKServer_Implementation(bool StopLeftHandIK)
 }
 
 
-void Afps_cppCharacter::OnRep_AnimState() {
+void Afps_cppCharacter::OnRep_AnimState() 
+{
 	OnAnimStateChanged.Broadcast();
 }
 
@@ -1765,9 +1849,9 @@ void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum W
 		AWeapon_Base_Pistol* FPistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
 		if (FPistol)
 		{
-			FPistol->GetSkeletalMeshComponent()->PlayAnimation(FPistol->GetShotSequence(), false);
 			FPistol->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
 			FPistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
+			FPistol->GetSkeletalMeshComponent()->PlayAnimation(FPistol->GetShotSequence(), false);
 		}
 	}
 }
