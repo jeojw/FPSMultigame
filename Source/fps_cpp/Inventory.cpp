@@ -11,7 +11,8 @@ UInventory::UInventory()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	Inventory.Add(FDynamicInventoryItem(1, 30, 0));
-	Inventory.Add(FDynamicInventoryItem(3, 8, 0));
+	Inventory.Add(FDynamicInventoryItem(2, 8, 0));
+	Inventory.Add(FDynamicInventoryItem(3, 0, 0));
 
 	MaxItemCount = 5;
 	// ...

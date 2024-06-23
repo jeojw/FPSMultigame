@@ -45,6 +45,8 @@ Afps_cppCharacter::Afps_cppCharacter()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 
+	OverrideInputComponentClass = UEnhancedInputComponent::StaticClass();
+
 	if (GetMesh())
 	{
 		GetMesh()->DestroyComponent();
@@ -78,7 +80,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	WeaponBase->SetIsReplicated(true);
 	WeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
 
-	OriginMeshVector = FVector(-19.762306f, -4.686809f, -147.949827f);
+	OriginMeshVector = FVector(-11.0f, -4.686809f, -147.949827f);
 
 	FPSMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FPSMesh"));
 	FPSMesh->SetupAttachment(FollowCamera);
@@ -301,26 +303,13 @@ void Afps_cppCharacter::PossessedBy(AController* NewController)
 	}
 
 	// 소유권 설정
-	//if (APlayerController* PC = Cast<APlayerController>(NewController))
-	//{
-	//	SetOwner(PC);
+	if (Afps_cppPlayerController* PC = Cast<Afps_cppPlayerController>(NewController))
+	{
+		SetOwner(PC);
 
-	//	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	//	if (PlayerController)
-	//	{
-	//		UE_LOG(LogTemp, Log, TEXT("BeginPlay: Character controlled by PlayerController"));
-	//		SetOwner(PlayerController);
-
-	//		// Initialize the PlayerInterface
-	//		PlayerInterface.SetInterface(Cast<IPlayerInterface>(this));
-	//		PlayerInterface.SetObject(this);
-
-	//		if (!PlayerInterface.GetObject() || !PlayerInterface.GetInterface())
-	//		{
-	//			UE_LOG(LogTemp, Error, TEXT("Failed to initialize PlayerInterface"));
-	//		}
-	//	}
-	//}
+		PlayerInterface.SetInterface(Cast<IPlayerInterface>(this));
+		PlayerInterface.SetObject(this);
+	}
 }
 
 void Afps_cppCharacter::BeginPlay()
@@ -972,7 +961,7 @@ void Afps_cppCharacter::ReloadDelayCompleted()
 
 void Afps_cppCharacter::Reload()
 {
-	if (!bIsDead && !bIsReloading)
+	if (!bIsDead && !bIsReloading && bAnimState == EAnimStateEnum::Melee)
 	{
 		bIsReloading = true;
 		if (!InventoryComponent) {
@@ -1247,6 +1236,17 @@ void Afps_cppCharacter::EquipItem()
 								SetWeaponClassServer(data->WeaponClass);
 								SetStatsToServer(data->Stats);
 								SetAnimStateServer(data->AnimState);
+							}
+							if (data->AnimState == EAnimStateEnum::Melee)
+							{
+								if (HasAuthority())
+								{
+									StopLeftHandIKMulticast(true);
+								}
+								else
+								{
+									StopLeftHandIKServer(true);
+								}
 							}
 							SetCurrentReloadAnimation(data->ReloadAnimation);
 							SetWeaponIcon(data->icon);
