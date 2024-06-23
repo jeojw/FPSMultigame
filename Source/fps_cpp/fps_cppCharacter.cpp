@@ -686,7 +686,7 @@ void Afps_cppCharacter::ControllerRecoil(float Value)
 
 void Afps_cppCharacter::ControlAim(float Value)
 {
-	if (!bIsDead)
+	if (!bIsDead && bAnimState != EAnimStateEnum::Melee)
 	{
 		FVector AimMeshVector;
 		FVector AimWeaponVector;
