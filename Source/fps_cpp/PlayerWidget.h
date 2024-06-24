@@ -61,7 +61,8 @@ class FPS_CPP_API UPlayerWidget : public UUserWidget
 
 	int RespawnProgress;
 	int CurItemSelection;
-	int PlayerHealth;
+	float PlayerMaxHealth;
+	float PlayerHealth;
 	EItemTypeEnum CurItem;
 	int CurPistols;
 

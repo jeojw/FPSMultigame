@@ -160,6 +160,9 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
 	int bHealth;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
+	int bMaxHealth;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	FTimerHandle bFireCooldownTimer;
 
@@ -258,6 +261,7 @@ public:
 	void SetIsDead(bool IsDead) { bIsDead = IsDead; }
 
 	int GetHealth() const { return bHealth; }
+	int GetMaxHealth() const { return bMaxHealth; }
 
 	bool GetIsAttacking() const { return bIsAttacking; }
 	void SetIsAttacking(bool NewValue) { bIsAttacking = NewValue; }
@@ -378,6 +382,15 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
 
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
+
+	UFUNCTION()
+	void HandleImpactEffects(AActor* actor, FVector Loc, FVector Normal);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void HandleImpactEffectsMulticast(AActor* actor, FVector Loc, FVector Normal);
+
 	UFUNCTION(BlueprintCallable)
 	void FireProjectileToDirection();
 
@@ -386,9 +399,9 @@ public:
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void PlaySoundAtLocationServer(FVector Location, USoundBase* Sound);
 
-	UFUNCTION(NetMulticast, UnReliable)
+	UFUNCTION(NetMulticast, Reliable)
 	void PlaySoundWithCooldownMulticast(FVector Location, USoundBase* Sound, float Delay);
-	UFUNCTION(Server, UnReliable, BlueprintCallable)
+	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void PlaySoundWithCooldownServer(FVector Location, USoundBase* Sound, float Delay);
 
 
@@ -438,8 +451,6 @@ public:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void SpawnBulletHoleMulticast(FTransform SpawnTransform);
-	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
-	void SpawnBulletHoleServer(FTransform SpawnTransform);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void SpawnPickupActorMulticast(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
@@ -452,8 +463,8 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void DeleteItemServer(AActor* DeleteItem);
 
-	UFUNCTION(Server, Unreliable, BlueprintCallable)
-	void ApplyDamageServer(AActor* DamageActor, float BaseDamage, AActor* DamageCauser);
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void ApplyDamage(AActor* DamageActor, float BaseDamage, AActor* DamageCauser);
 
 	UFUNCTION(Server, Unreliable, BlueprintCallable)
 	void WallDistanceServer(float WallDistance);
@@ -518,6 +529,11 @@ protected:
 
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
+	void ServerReceiveImpactProjectile_Implementation(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
+	bool ServerReceiveImpactProjectile_Validate(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
+
+	void HandleImpactEffectsMulticast_Implementation(AActor* actor, FVector Loc, FVector Normal);
+
 	void PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound);
 	void PlaySoundAtLocationServer_Implementation(FVector Location, USoundBase* Sound);
 
@@ -545,8 +561,6 @@ protected:
 	bool SetStatsToServer_Validate(FWeaponStatsStruct CurrentStats);
 
 	void SpawnBulletHoleMulticast_Implementation(FTransform SpawnTransform);
-	void SpawnBulletHoleServer_Implementation(FTransform SpawnTransform);
-	bool SpawnBulletHoleServer_Validate(FTransform SpawnTransform);
 
 	void PlayAnimMontageMulticast_Implementation(UAnimMontage* AnimMontage);
 	void PlayAnimMontageServer_Implementation(UAnimMontage* AnimMontage);
@@ -563,7 +577,7 @@ protected:
 	void DeleteItemServer_Implementation(AActor* DeleteItem);
 	bool DeleteItemServer_Validate(AActor* DeleteItem);
 
-	void ApplyDamageServer_Implementation(AActor* DamageActor, float BaseDamage, AActor* DamageCauser);
+	void ApplyDamage_Implementation(AActor* DamageActor, float BaseDamage, AActor* DamageCauser);
 
 	void WallDistanceMulticast_Implementation(float WallDistance);
 	void WallDistanceServer_Implementation(float WallDistance);

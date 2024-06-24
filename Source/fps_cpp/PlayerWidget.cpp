@@ -50,6 +50,7 @@ void UPlayerWidget::UpdatePlayerState()
     // Player가 Null인지 확인
     if (Player)
     {
+        PlayerMaxHealth = Player->GetMaxHealth();
         PlayerHealth = Player->GetHealth();  // 예시 값
         CurItem = Player->GetWeaponType();  // EItemTypeEnum의 초기값 설정
         CurItemSelection = Player->GetCurrentItemSelection();
@@ -94,7 +95,9 @@ void UPlayerWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
         if (HpBar)
         {
-            HpBar->SetPercent(FMath::Clamp(PlayerHealth / 100.0f, 0.0f, 1.0f));
+            UE_LOG(LogTemp, Warning, TEXT("MaxHealth: %f"), PlayerMaxHealth);
+            UE_LOG(LogTemp, Warning, TEXT("MaxHealth: %f"), PlayerMaxHealth);
+            HpBar->SetPercent(FMath::Clamp(PlayerHealth / PlayerMaxHealth, 0.0f, 1.0f));
         }
 
         if (Player->GetIsDead())

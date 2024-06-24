@@ -120,6 +120,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bAnimState = EAnimStateEnum::Hands;
 	bCurrentItemSelection = 0;
 
+	bMaxHealth = 200.0f;
 	bHealth = 200.0f;
 
 	Tags.Add(FName("Flesh"));
@@ -651,7 +652,7 @@ void Afps_cppCharacter::StopSprint()
 		}
 		else
 		{
-			SprintServer(100.0f);
+			SprintServer(350.0f);
 		}
 	}
 }
@@ -961,7 +962,7 @@ void Afps_cppCharacter::ReloadDelayCompleted()
 
 void Afps_cppCharacter::Reload()
 {
-	if (!bIsDead && !bIsReloading && bAnimState == EAnimStateEnum::Melee)
+	if (!bIsDead && !bIsReloading && bAnimState != EAnimStateEnum::Melee)
 	{
 		bIsReloading = true;
 		if (!InventoryComponent) {
@@ -1352,98 +1353,83 @@ void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* 
 	FTransform tmpTransform = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), Loc, FVector(1, 1, 1));
 	if (actor)
 	{
-		ApplyDamageServer(actor, bCurrentStats.Damage, this);
-
-		// 서버에서만 호출
 		if (HasAuthority())
 		{
-			SpawnBulletHoleMulticast(tmpTransform);
+			ApplyDamage(actor, bCurrentStats.Damage, this);
+			HandleImpactEffects(actor, Loc, Normal);
 		}
 		else
 		{
-			SpawnBulletHoleServer(tmpTransform);
-		}
-		USoundCue* WeaponSound = nullptr;
-		if (bCurrentWeaponClass == AWeapon_Base_M4::StaticClass())
-		{
-			WeaponSound = RifleSurfaceImpactSoundCue;
-		}
-		else if (bCurrentWeaponClass == AWeapon_Base_Pistol::StaticClass())
-		{
-			WeaponSound = PistolSurfaceImpactSoundCue;
-		}
-		if (actor->ActorHasTag("Metal"))
-		{
-			if (HasAuthority())
-			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
-				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			}
-			else
-			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
-				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			}
-		}
-		else if (actor->ActorHasTag("Stone"))
-		{
-			if (HasAuthority())
-			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
-				SpawnEmitterAtLocationMulticast(StoneImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			}
-			else
-			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
-				SpawnEmitterAtLocationServer(StoneImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			}
-		}
-		else if (actor->ActorHasTag("Player"))
-		{
-			if (HasAuthority())
-			{
-				PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
-				SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			}
-			else
-			{
-				PlaySoundAtLocationServer(FollowCamera->GetComponentLocation(), WeaponSound);
-				SpawnEmitterAtLocationServer(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
-			}
-
-			FVector Start = Loc;
-			FVector End = FollowCamera->GetForwardVector() * 1500.0f + Loc;
-			FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
-			TraceParams.AddIgnoredActor(actor);  // Ignore the original hit actor
-			FHitResult HitResult;
-
-			bool bHit = GetWorld()->LineTraceSingleByChannel(
-				HitResult,
-				Start,
-				End,
-				ECC_Visibility,
-				TraceParams
-			);
-
-			if (bHit)
-			{
-				FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(HitResult.Normal).Rotator(), HitResult.Location, FVector(1, 1, 1));
-				TSubclassOf<AActor> Blood = ABloodDecal::StaticClass();
-				if (Blood)
-				{
-					if (HasAuthority())
-					{
-						SpawnActorToMulticast(Blood, tmpTransform2, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-					}
-					else
-					{
-						SpawnActorToServer(Blood, tmpTransform2, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-					}
-				}
-			}
-
+			ServerReceiveImpactProjectile(actor, comp, Loc, Normal);
 		}
 	}
+}
+
+void Afps_cppCharacter::HandleImpactEffects(AActor* actor, FVector Loc, FVector Normal)
+{
+	FTransform tmpTransform = FTransform(FRotationMatrix::MakeFromX(Normal).Rotator(), Loc, FVector(1, 1, 1));
+
+	SpawnBulletHoleMulticast(tmpTransform);
+
+	USoundCue* WeaponSound = nullptr;
+	if (bCurrentWeaponClass == AWeapon_Base_M4::StaticClass())
+	{
+		WeaponSound = RifleSurfaceImpactSoundCue;
+	}
+	else if (bCurrentWeaponClass == AWeapon_Base_Pistol::StaticClass())
+	{
+		WeaponSound = PistolSurfaceImpactSoundCue;
+	}
+
+	if (actor->ActorHasTag("Metal"))
+	{
+		PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
+		SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+	}
+	else if (actor->ActorHasTag("Stone"))
+	{
+		PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
+		SpawnEmitterAtLocationMulticast(StoneImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+	}
+	else if (actor->ActorHasTag("Player"))
+	{
+		PlaySoundAtLocationMulticast(FollowCamera->GetComponentLocation(), WeaponSound);
+		SpawnEmitterAtLocationMulticast(MetalImpactParticleSystem, Loc, FRotator(0, 0, 0), FVector(1, 1, 1));
+
+		FVector Start = Loc;
+		FVector End = FollowCamera->GetForwardVector() * 1500.0f + Loc;
+		FCollisionQueryParams TraceParams(FName(TEXT("HitTrace")), true, this);
+		TraceParams.AddIgnoredActor(actor);
+		FHitResult HitResult;
+
+		bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, TraceParams);
+
+		if (bHit)
+		{
+			FTransform tmpTransform2 = FTransform(FRotationMatrix::MakeFromX(HitResult.Normal).Rotator(), HitResult.Location, FVector(1, 1, 1));
+			TSubclassOf<AActor> Blood = ABloodDecal::StaticClass();
+			if (Blood)
+			{
+				SpawnActorToMulticast(Blood, tmpTransform2, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+			}
+		}
+	}
+}
+
+void Afps_cppCharacter::ServerReceiveImpactProjectile_Implementation(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal)
+{
+	ApplyDamage(actor, bCurrentStats.Damage, this);
+	HandleImpactEffectsMulticast(actor, Loc, Normal);
+}
+
+bool Afps_cppCharacter::ServerReceiveImpactProjectile_Validate(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal)
+{
+	return true;
+}
+
+void Afps_cppCharacter::HandleImpactEffectsMulticast_Implementation(AActor* actor, FVector Loc, FVector Normal)
+{
+	HandleImpactEffects(actor, Loc, Normal);
 }
 
 void Afps_cppCharacter::DeleteItemServer_Implementation(AActor* DeleteItem)
@@ -1515,7 +1501,14 @@ void Afps_cppCharacter::PlaySoundWithCooldownMulticast_Implementation(FVector Lo
 		if (!bSoundPlaying)
 		{
 			bSoundPlaying = true;
-			UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
+			if (HasAuthority())
+			{
+				PlaySoundAtLocationMulticast(Location, Sound);
+			}
+			else
+			{
+				PlaySoundAtLocationServer(Location, Sound);
+			}
 		}
 	}
 }
@@ -1728,20 +1721,14 @@ void Afps_cppCharacter::SpawnBulletHoleMulticast_Implementation(FTransform Spawn
 	}
 }
 
-void Afps_cppCharacter::SpawnBulletHoleServer_Implementation(FTransform SpawnTransform)
+void Afps_cppCharacter::ApplyDamage_Implementation(AActor* DamageActor, float BaseDamage, AActor* DamageCauser)
 {
-	SpawnBulletHoleMulticast(SpawnTransform);
+	UE_LOG(LogTemp, Warning, TEXT("ApplyDamage called"));
+	AController* InstigatorController = DamageCauser->GetInstigatorController();
+
+	UGameplayStatics::ApplyDamage(DamageActor, BaseDamage, InstigatorController, DamageCauser, nullptr);
 }
 
-bool Afps_cppCharacter::SpawnBulletHoleServer_Validate(FTransform SpawnTransform)
-{
-	return true;
-}
-
-void Afps_cppCharacter::ApplyDamageServer_Implementation(AActor* DamageActor, float BaseDamage, AActor* DamageCauser)
-{
-	UGameplayStatics::ApplyDamage(DamageActor, BaseDamage, nullptr, DamageCauser, nullptr);
-}
 
 void Afps_cppCharacter::WallDistanceMulticast_Implementation(float WallDistance)
 {
@@ -1755,12 +1742,15 @@ void Afps_cppCharacter::WallDistanceServer_Implementation(float WallDistance)
 float Afps_cppCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-
+	
 	if (ActualDamage > 0.0f)
 	{
 		bHealth -= ActualDamage;
 
+		UE_LOG(LogTemp, Warning, TEXT("Health: %d"), bHealth);
+
 		bHealth = FMath::Max(bHealth, 0.0f);
+
 		if (bHealth <= 0.0f)
 		{
 			bIsDead = true;
