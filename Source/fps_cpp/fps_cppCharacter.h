@@ -21,7 +21,7 @@
 #include "Components/TimelineComponent.h"
 #include "PaperSprite.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/ArrowComponent.h"
+#include "fps_cppPlayerState.h"
 #include "fps_cppCharacter.generated.h"
 
 
@@ -33,8 +33,6 @@ class UInputAction;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAnimStateChangedEvent);
 
 UCLASS(config = Game)
 class Afps_cppCharacter : public ACharacter, public IPlayerInterface
@@ -56,6 +54,9 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UInventory* InventoryComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
+	Afps_cppPlayerState* FPSPlayerState;
 	
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -94,9 +95,6 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* DropItemAction;
 
-	UPROPERTY(Replicated)
-	TSubclassOf<AActor> bCurrentWeaponClass;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 	UChildActorComponent* WeaponBase;
 
@@ -127,9 +125,6 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bSoundPlaying;
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	bool bIsDead;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bJumping;
 
@@ -157,41 +152,17 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	int bCurrentItemSelection;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
-	int bHealth;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
-	int bMaxHealth;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	FTimerHandle bFireCooldownTimer;
+
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AActor> bCurrentWeaponClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<APickUpBase> bCurrentWeaponPickUpClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
-	FWeaponStatsStruct bCurrentStats;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* bCurrentReloadAnimation;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UDataTable* DT_ItemData;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TScriptInterface<IPlayerInterface> PlayerInterface;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	EItemTypeEnum bWeaponType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UPaperSprite* WeaponIcon;
-
-	UPROPERTY(BlueprintAssignable)
-	FAnimStateChangedEvent OnAnimStateChanged;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AnimState, meta = (AllowPrivateAccess = "true"))
-	EAnimStateEnum bAnimState;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	FTransform bLeftHandSocketTransform;
@@ -238,8 +209,8 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	void CheckWallTick();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<UAnimInstance> bAnimationBlueprintRef;
+	UPROPERTY(VisibleAnywhere, Replicated, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AActor> CurrentWeaponClass;
 
 	FTimerHandle WalkTimerHandle;
 	FTimerHandle RunTimerHandle;
@@ -257,11 +228,7 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 public:
 	Afps_cppCharacter();
 
-	bool GetIsDead() const { return bIsDead; }
-	void SetIsDead(bool IsDead) { bIsDead = IsDead; }
-
-	int GetHealth() const { return bHealth; }
-	int GetMaxHealth() const { return bMaxHealth; }
+	void InitializePlayerState();
 
 	bool GetIsAttacking() const { return bIsAttacking; }
 	void SetIsAttacking(bool NewValue) { bIsAttacking = NewValue; }
@@ -295,34 +262,12 @@ public:
 	UChildActorComponent* GetWeaponBase() const { return WeaponBase; }
 	void SetWeaponBase(UChildActorComponent* _WeaponBase) { WeaponBase = _WeaponBase; }
 
-	EAnimStateEnum GetAnimState() const { return bAnimState; }
-	void SetAnimState(EAnimStateEnum AnimState) { bAnimState = AnimState; }
-
-	TScriptInterface<IPlayerInterface> GetPlayerInterface() const { return PlayerInterface; }
-	void SetPlayerInterface(TScriptInterface<IPlayerInterface> NewPlayerInterface) { PlayerInterface = NewPlayerInterface; }
-
-	FWeaponStatsStruct GetCurrentStats() const { return bCurrentStats; }
-	void SetCurrentStats(FWeaponStatsStruct CurrentStats) { bCurrentStats = CurrentStats; }
-
-	UAnimMontage* GetCurrentReloadAnimation() const { return bCurrentReloadAnimation; }
-	void SetCurrentReloadAnimation(UAnimMontage* CurrentReloadAnimation) { bCurrentReloadAnimation = CurrentReloadAnimation; }
-
-	TSubclassOf<AActor> GetCurrentWeaponClass() const { return bCurrentWeaponClass; }
-	void SetCurrentWeaponClass(TSubclassOf<AActor> CurrentWeaponClass) { bCurrentWeaponClass = CurrentWeaponClass; }
-
-	EItemTypeEnum GetWeaponType() const { return bWeaponType; }
-	void SetWeaponType(EItemTypeEnum WeaponType) { bWeaponType = WeaponType; }
-
-	int GetCurrentItemSelection() const { return bCurrentItemSelection; }
-	void SetCurrentItemSelection(int CurItem) { bCurrentItemSelection = CurItem; }
-
 	FTransform GetLeftHandSocketTransform() const { return bLeftHandSocketTransform; }
 	void SetLeftHandSocketTransoform(FTransform LeftHandSocketTransform) { bLeftHandSocketTransform = LeftHandSocketTransform; }
 
 	UInventory* GetInventory() const { return InventoryComponent; }
 
-	UPaperSprite* GetWeaponIcon() const { return WeaponIcon; }
-	void SetWeaponIcon(UPaperSprite* NewIcon) { WeaponIcon = NewIcon; }
+	Afps_cppPlayerState* GetFPSPlayerState() const { return FPSPlayerState; }
 
 	UFUNCTION()
 	void ControllerRecoil(float RecoilAmount);
@@ -377,7 +322,7 @@ public:
 	void Lean(const FInputActionValue& Value);
 
 	UFUNCTION(BlueprintCallable)
-	void EquipItem();
+	void EquipItem(int index);
 
 	UFUNCTION(BlueprintCallable)
 	void ReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
@@ -387,6 +332,9 @@ public:
 
 	UFUNCTION()
 	void HandleImpactEffects(AActor* actor, FVector Loc, FVector Normal);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void HandleImpactEffectsServer(AActor* actor, FVector Loc, FVector Normal);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void HandleImpactEffectsMulticast(AActor* actor, FVector Loc, FVector Normal);
@@ -419,29 +367,6 @@ public:
 	void PlayAnimMontageMulticast(UAnimMontage* AnimMontage);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void PlayAnimMontageServer(UAnimMontage* AnimMontage);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void SetWeaponClassMulticast(TSubclassOf<AActor> WBase);
-	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
-	void SetWeaponClassServer(TSubclassOf<AActor> WBase);
-
-	UFUNCTION(Server, Reliable)
-	void SetStatsToMulticast(FWeaponStatsStruct CurrentStats);
-	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
-	void SetStatsToServer(FWeaponStatsStruct CurrentStats);
-
-	UFUNCTION(NetMulticast, Unreliable)
-	void StopLeftHandIKMulticast(bool StopLeftHandIK);
-	UFUNCTION(Server, Unreliable, BlueprintCallable)
-	void StopLeftHandIKServer(bool StopLeftHandIK);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void SetAnimStateMulticast(EAnimStateEnum AnimState);
-	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
-	void SetAnimStateServer(EAnimStateEnum AnimState);
-
-	UFUNCTION()
-	void OnRep_AnimState();
 
 	UFUNCTION()
 	void OnRep_LeanLeft();
@@ -498,6 +423,11 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void DeactivateObjectMulticast();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void SetWeaponClassMulticast(TSubclassOf<AActor> WBase);
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+	void SetWeaponClassServer(TSubclassOf<AActor> WBase);
+
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	virtual void IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform) override;
@@ -528,10 +458,11 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
-
 	void ServerReceiveImpactProjectile_Implementation(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
 	bool ServerReceiveImpactProjectile_Validate(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal);
 
+	void HandleImpactEffectsServer_Implementation(AActor* actor, FVector Loc, FVector Normal);
+	bool HandleImpactEffectsServer_Validate(AActor* actor, FVector Loc, FVector Normal);
 	void HandleImpactEffectsMulticast_Implementation(AActor* actor, FVector Loc, FVector Normal);
 
 	void PlaySoundAtLocationMulticast_Implementation(FVector Location, USoundBase* Sound);
@@ -546,29 +477,14 @@ protected:
 	void SpawnActorToMulticast_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
 	void SpawnActorToServer_Implementation(TSubclassOf<AActor> Class, FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride);
 
-	void SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase);
-	void SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase);
-	bool SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase);
-
 	void SprintServer_Implementation(float MaxWalkSpeed);
 	bool SprintServer_Validate(float MaxWalkSpeed);
-
-	void StopLeftHandIKMulticast_Implementation(bool StopLeftHandIK);
-	void StopLeftHandIKServer_Implementation(bool StopLeftHandIK);
-
-	void SetStatsToMulticast_Implementation(FWeaponStatsStruct CurrentStats);
-	void SetStatsToServer_Implementation(FWeaponStatsStruct CurrentStats);
-	bool SetStatsToServer_Validate(FWeaponStatsStruct CurrentStats);
 
 	void SpawnBulletHoleMulticast_Implementation(FTransform SpawnTransform);
 
 	void PlayAnimMontageMulticast_Implementation(UAnimMontage* AnimMontage);
 	void PlayAnimMontageServer_Implementation(UAnimMontage* AnimMontage);
 	bool PlayAnimMontageServer_Validate(UAnimMontage* AnimMontage);
-
-	void SetAnimStateMulticast_Implementation(EAnimStateEnum AnimState);
-	void SetAnimStateServer_Implementation(EAnimStateEnum AnimState);
-	bool SetAnimStateServer_Validate(EAnimStateEnum AnimState);
 
 	void SpawnPickupActorMulticast_Implementation(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
 	void SpawnPickupActorServer_Implementation(FTransform SpawnTransform, ESpawnActorCollisionHandlingMethod CollisionHandlingOverride, FDynamicInventoryItem Item, TSubclassOf<class APickUpBase> Class);
@@ -602,6 +518,10 @@ protected:
 	void DeactivateObjectServer_Implementation();
 	bool DeactivateObjectServer_Validate();
 	void DeactivateObjectMulticast_Implementation();
+	
+	void SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase);
+	void SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase);
+	bool SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

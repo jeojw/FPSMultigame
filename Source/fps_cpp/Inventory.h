@@ -35,6 +35,7 @@ public:
 	void SetInventory(TArray<FDynamicInventoryItem> _Inventory) { Inventory = _Inventory; }
 	TArray<FDynamicInventoryItem> GetInventory() const { return Inventory; }
 
+	int GetCurID(int current) const;
 	int GetCurBullet(int current) const;
 	void ReduceBullet(int current);
 	void ReloadBullet(int current, FWeaponStatsStruct curStats);

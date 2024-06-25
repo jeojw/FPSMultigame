@@ -5,6 +5,10 @@
 
 AWeapon_Base_Knife::AWeapon_Base_Knife() : AWeapon_Base()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	bAlwaysRelevant = true;
+
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshAsset(TEXT("/Game/MilitaryWeapSilver/Weapons/Knife_A"));
 	if (SkeletalMeshAsset.Succeeded())
 	{

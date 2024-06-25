@@ -43,6 +43,18 @@ Afps_cppPlayerController::Afps_cppPlayerController() : APlayerController()
 void Afps_cppPlayerController::BeginPlay()
 {
     Super::BeginPlay();
+    PlayerState = GetPlayerState<Afps_cppPlayerState>();
+
+    if (IsLocalPlayerController())
+    {
+        ClientInitializeUI();
+    }
+}
+
+void Afps_cppPlayerController::OnPossess(APawn* aPawn)
+{
+    Super::OnPossess(aPawn);
+    PlayerState = GetPlayerState<Afps_cppPlayerState>();
 
     if (IsLocalPlayerController())
     {
@@ -63,6 +75,9 @@ void Afps_cppPlayerController::ClientInitializeUI_Implementation()
     bShowMouseCursor = true;
     bEnableClickEvents = true;
     bEnableMouseOverEvents = true;
+
+    FInputModeUIOnly InputMode;
+    SetInputMode(InputMode);
 }
 
 void Afps_cppPlayerController::InitializeUI()
@@ -156,5 +171,8 @@ void Afps_cppPlayerController::VisiblePlayerUI()
         bShowMouseCursor = false;
         bEnableClickEvents = false;
         bEnableMouseOverEvents = false;
+
+        FInputModeGameOnly InputMode;
+        SetInputMode(InputMode);
     }
 }

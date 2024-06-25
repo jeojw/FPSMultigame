@@ -5,6 +5,9 @@
 
 AWeapon_Base_M4::AWeapon_Base_M4() : AWeapon_Base()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	bAlwaysRelevant = true;
 	// Using static ConstructorHelpers to find animations during BeginPlay
 	static ConstructorHelpers::FObjectFinder<UAnimSequence> ShotSequenceFinder(TEXT("/Game/MilitaryWeapSilver/Weapons/Animations/Fire_Rifle_W"));
 	if (ShotSequenceFinder.Succeeded())

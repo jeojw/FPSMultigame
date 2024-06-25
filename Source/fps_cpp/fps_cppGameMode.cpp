@@ -16,19 +16,10 @@ Afps_cppGameMode::Afps_cppGameMode() : AGameModeBase()
 	PrimaryActorTick.bCanEverTick = true;
 
 	PlayerControllerClass = Afps_cppPlayerController::StaticClass();
-	/*static ConstructorHelpers::FClassFinder<Afps_cppCharacter> PlayerPawnBPClassFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
-	if (PlayerPawnBPClassFinder.Succeeded())
-	{
-		PlayerPawnBPClass = PlayerPawnBPClassFinder.Class;
-		DefaultPawnClass = PlayerPawnBPClass;
-	}*/
-	DefaultPawnClass = Afps_cppCharacter::StaticClass();
 
-	/*static ConstructorHelpers::FObjectFinder<Afps_cppCharacter> PlayerPawnBPObjectFinder(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
-	if (PlayerPawnBPObjectFinder.Succeeded())
-	{
-		Player = PlayerPawnBPObjectFinder.Object;
-	}*/
+	PlayerStateClass = Afps_cppPlayerState::StaticClass();
+
+	DefaultPawnClass = Afps_cppCharacter::StaticClass();
 
 	static ConstructorHelpers::FObjectFinder<USoundWave> StartBGMFinder(TEXT("/Game/FPS_BGM/Phat_Phrog_Studio_-_Dropship_Assault_-_Uprising_Protocol_-_LOOP"));
 	if (StartBGMFinder.Succeeded())
@@ -67,10 +58,22 @@ void Afps_cppGameMode::BeginPlay()
 void Afps_cppGameMode::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (Player && Player->GetIsDead())
+
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Respawn!!"));
-		Respawn();
+		APlayerController* Controller = It->Get();
+		Afps_cppPlayerController* MyPlayerController = Cast<Afps_cppPlayerController>(Controller);
+
+		if (MyPlayerController)
+		{
+			Afps_cppPlayerState* PlayerState = MyPlayerController->GetPlayerState<Afps_cppPlayerState>();
+
+			if (PlayerState && PlayerState->GetIsDead())
+			{
+				UE_LOG(LogTemp, Log, TEXT("Respawn!!"));
+				RespawnFunction(MyPlayerController, PlayerState);
+			}
+		}
 	}
 }
 
@@ -97,7 +100,18 @@ void Afps_cppGameMode::PostLogin(APlayerController* NewPlayer)
 	{
 		MyPlayerController->ClientInitializeUI();
 
-		Player = Cast<Afps_cppCharacter>(MyPlayerController->GetPawn());
+		Afps_cppCharacter* Player = Cast<Afps_cppCharacter>(MyPlayerController->GetPawn());
+		Afps_cppPlayerState* PlayerState = MyPlayerController->GetPlayerState<Afps_cppPlayerState>();
+
+		if (Player && PlayerState)
+		{
+			Player->InitializePlayerState();
+			UE_LOG(LogTemp, Log, TEXT("PlayerState initialized successfully in GameMode."));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Player or PlayerState is null in GameMode PostLogin."));
+		}
 	}
 
 	//FVector SpawnLocation(1000.0f, 600.0f, 0.0f);
@@ -122,38 +136,37 @@ void Afps_cppGameMode::Logout(AController* Exiting)
 
 void Afps_cppGameMode::Respawn()
 {
-	if (GetWorld())
+	/*if (GetWorld())
 	{
 		GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, this, &Afps_cppGameMode::RespawnFunction, RespawnTime, false);
-	}
+	}*/
 }
 
-void Afps_cppGameMode::RespawnFunction()
+void Afps_cppGameMode::RespawnFunction(Afps_cppPlayerController* PlayerController, Afps_cppPlayerState* PlayerState)
 {
-    if (PlayerPawnBPClass != nullptr)
-    {
-		if (GetWorld())
+	if (PlayerController && PlayerState)
+	{
+		UWorld* World = GetWorld();
+		if (World)
 		{
-			APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-			if (PlayerController)
+			FVector SpawnLocation(900.0f, 1100.0f, 92.0f);
+			FRotator SpawnRotation = FRotator::ZeroRotator;
+			FActorSpawnParameters SpawnParams;
+			SpawnParams.Owner = PlayerController;
+
+			Afps_cppCharacter* NewPawn = World->SpawnActor<Afps_cppCharacter>(DefaultPawnClass, SpawnLocation, SpawnRotation, SpawnParams);
+			if (NewPawn)
 			{
-				Afps_cppCharacter* NewPawn = GetWorld()->SpawnActor<Afps_cppCharacter>(PlayerPawnBPClass, FVector(900.0f, 1100.0f, 92.0f), FRotator::ZeroRotator);
-				if (NewPawn)
-				{
-					PlayerController->Possess(NewPawn);
-
-					Player = NewPawn;
-					if (Player)
-					{
-						Player->SetIsDead(false);
-					}
-				}
-
+				PlayerController->Possess(NewPawn);
+				PlayerState->SetIsDead(false); // PlayerState의 IsDead 상태를 리셋
+				UE_LOG(LogTemp, Log, TEXT("Player has been respawned and possessed by the controller"));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to spawn new pawn"));
 			}
 		}
-    }
-
-    GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle);
+	}
 }
 
 void Afps_cppGameMode::InitializeNetworkSettings()

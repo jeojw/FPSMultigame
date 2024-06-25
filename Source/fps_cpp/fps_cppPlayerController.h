@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "fps_cppPlayerState.h"
 #include "fps_cppPlayerController.generated.h"
 
 /**
@@ -18,6 +19,7 @@ public:
 	Afps_cppPlayerController();
 
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* aPawn) override;
 	virtual void Tick(float DeltaSeconds) override;
 
 	UFUNCTION(Client, Reliable)

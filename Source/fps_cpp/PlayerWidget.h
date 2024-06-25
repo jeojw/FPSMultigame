@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "fps_cppCharacter.h"
+#include "fps_cppPlayerState.h"
 #include "Components/ProgressBar.h"
 #include "Components/Image.h"
 #include "Components/CanvasPanel.h"
@@ -54,7 +54,7 @@ class FPS_CPP_API UPlayerWidget : public UUserWidget
 	UProgressBar* RespawnBar;
 
 	UPROPERTY()
-	Afps_cppCharacter* Player;
+	Afps_cppPlayerState* PlayerState;
 
 	UPROPERTY()
 	UPaperSprite* CurWeaponIcon;

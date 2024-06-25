@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "fps_cppPlayerState.h"
 #include "fps_cppCharacter.h"
+#include "fps_cppPlayerController.h"
 #include "Sound/SoundWave.h"
 #include "GameFramework/GameModeBase.h"
 #include "Components/AudioComponent.h"
@@ -23,7 +25,7 @@ public:
 	void StartGame();
 	
 	void Respawn();
-	void RespawnFunction();
+	void RespawnFunction(Afps_cppPlayerController* PlayerController, Afps_cppPlayerState* PlayerState);
 
 	void CreateDefaultSaveGame();
 
@@ -37,11 +39,6 @@ protected:
 private:
 	void InitializeNetworkSettings();
 
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<class Afps_cppCharacter> PlayerPawnBPClass;
-
-	UPROPERTY(EditAnywhere)
-	Afps_cppCharacter* Player;
 
 	UPROPERTY(EditAnywhere)
 	USoundWave* StartBGM;

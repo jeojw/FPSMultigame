@@ -36,6 +36,12 @@ void UInventory::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompo
 
 	// ...
 }
+
+int UInventory::GetCurID(int current) const
+{
+	return Inventory[current].ID;
+}
+
 int UInventory::GetCurBullet(int current) const
 {
 	return Inventory[current].Bullets;

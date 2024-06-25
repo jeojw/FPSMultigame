@@ -6,6 +6,10 @@
 
 AWeapon_Base_Pistol::AWeapon_Base_Pistol() : AWeapon_Base()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	bAlwaysRelevant = true;
+
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SkeletalMeshAsset(TEXT("/Game/MilitaryWeapSilver/Weapons/Pistols_A"));
 	if (SkeletalMeshAsset.Succeeded())
 	{

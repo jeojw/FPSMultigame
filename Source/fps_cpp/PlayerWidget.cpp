@@ -43,18 +43,16 @@ void UPlayerWidget::FetchPlayerCharacter()
 
 void UPlayerWidget::UpdatePlayerState()
 {
-    // PlayerCharacter를 가져옴
-    ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-    Player = Cast<Afps_cppCharacter>(PlayerCharacter);
+    APlayerState* GetPlayerState = UGameplayStatics::GetPlayerState(GetWorld(), 0);
+    PlayerState = Cast<Afps_cppPlayerState>(GetPlayerState);
 
-    // Player가 Null인지 확인
-    if (Player)
+    if (PlayerState)
     {
-        PlayerMaxHealth = Player->GetMaxHealth();
-        PlayerHealth = Player->GetHealth();  // 예시 값
-        CurItem = Player->GetWeaponType();  // EItemTypeEnum의 초기값 설정
-        CurItemSelection = Player->GetCurrentItemSelection();
-        CurPistols = Player->GetInventory()->GetCurBullet(CurItemSelection);
+        PlayerMaxHealth = PlayerState->GetMaxHealth();
+        PlayerHealth = PlayerState->GetHealth();  // 예시 값
+        CurItem = PlayerState->GetCurrentWeaponType();  // EItemTypeEnum의 초기값 설정
+        CurItemSelection = PlayerState->GetCurrentItemSelection();
+        CurPistols = PlayerState->GetInventory()->GetCurBullet(CurItemSelection);
         CurWeaponIcon = LoadObject<UPaperSprite>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/Weapons/Weapon_Icons/Weapon_Icon_WeaponIcon_12"));
 
         if (CurBulletCounts)
@@ -82,11 +80,11 @@ void UPlayerWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
 
-    if (Player)
+    if (PlayerState)
     {
-        CurPistols = Player->GetInventory()->GetCurBullet(CurItemSelection); // 플레이어의 총알 개수 업데이트 (예시)
-        PlayerHealth = Player->GetHealth(); // 플레이어의 체력 업데이트 (예시)
-        CurWeaponIcon = Player->GetWeaponIcon();
+        CurPistols = PlayerState->GetInventory()->GetCurBullet(CurItemSelection); // 플레이어의 총알 개수 업데이트 (예시)
+        PlayerHealth = PlayerState->GetHealth(); // 플레이어의 체력 업데이트 (예시)
+        CurWeaponIcon = PlayerState->GetWeaponIcon();
 
         if (CurBulletCounts)
         {
@@ -95,12 +93,10 @@ void UPlayerWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
         if (HpBar)
         {
-            UE_LOG(LogTemp, Warning, TEXT("MaxHealth: %f"), PlayerMaxHealth);
-            UE_LOG(LogTemp, Warning, TEXT("MaxHealth: %f"), PlayerMaxHealth);
             HpBar->SetPercent(FMath::Clamp(PlayerHealth / PlayerMaxHealth, 0.0f, 1.0f));
         }
 
-        if (Player->GetIsDead())
+        if (PlayerState->GetIsDead())
         {
             DeathMessage->SetVisibility(ESlateVisibility::Visible);
             RespawnBar->SetVisibility(ESlateVisibility::Visible);

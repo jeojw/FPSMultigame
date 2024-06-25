@@ -20,7 +20,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	USceneComponent* AimOffset;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	UPROPERTY(VisibleAnywhere,BlueprintReadWrite)
 	USceneComponent* AimOffset_RedDot;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
