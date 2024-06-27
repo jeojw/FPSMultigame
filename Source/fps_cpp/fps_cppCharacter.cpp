@@ -105,6 +105,8 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bReplicates = true;
 	bAlwaysRelevant = true;
 
+	bWalking = false;
+
 	bSprinting = false;
 	bSoundPlaying = false;
 	bIsAiming = false;
@@ -958,7 +960,7 @@ void Afps_cppCharacter::ReloadDelayCompleted()
 
 	if (FPSPlayerState && FPSPlayerState->GetInventory() && FPSPlayerState->GetInventory()->GetInventory().IsValidIndex(bCurrentItemSelection))
 	{
-		FPSPlayerState->ReloadCurrentBullet(bCurrentItemSelection);
+		FPSPlayerState->ReloadCurrentBullet(bCurrentItemSelection, CurrentStats.MagSize);
 		if (HasAuthority())
 		{
 			StopLeftHandIKMulticast(false);

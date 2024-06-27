@@ -51,8 +51,8 @@ void UInventory::ReduceBullet(int current)
 {
 	Inventory[current].Bullets -= 1;
 }
-void UInventory::ReloadBullet(int current, FWeaponStatsStruct curStats)
+void UInventory::ReloadBullet(int current, int maxSize)
 {
-	Inventory[current].Bullets = curStats.MagSize;
+	Inventory[current].Bullets = maxSize;
 }
 

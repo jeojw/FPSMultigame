@@ -38,7 +38,7 @@ public:
 	int GetCurID(int current) const;
 	int GetCurBullet(int current) const;
 	void ReduceBullet(int current);
-	void ReloadBullet(int current, FWeaponStatsStruct curStats);
+	void ReloadBullet(int current, int maxSize);
 
 	void SetMaxItemCount(int _max) { MaxItemCount = _max; }
 	int GetMaxItemCount() const { return MaxItemCount; }

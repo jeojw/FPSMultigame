@@ -71,7 +71,7 @@ public:
 	int GetCurrentID(int index) const { return InventoryComponent->GetCurID(index); }
 	int GetCurrentBullet(int index) const { return InventoryComponent->GetCurBullet(index); }
 	void ReduceCurrentBullet(int index) { InventoryComponent->ReduceBullet(index); }
-	void ReloadCurrentBullet(int index) { InventoryComponent->ReloadBullet(index, CurrentStats); }
+	void ReloadCurrentBullet(int index, int maxSize) { InventoryComponent->ReloadBullet(index, maxSize); }
 
 	FDynamicInventoryItem GetItem(int index) const { return InventoryComponent->GetInventory()[index]; }
 	void RemoveItemAt(int index) const { InventoryComponent->GetInventory().RemoveAt(index); }
