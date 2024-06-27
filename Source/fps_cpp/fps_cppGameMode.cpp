@@ -33,7 +33,7 @@ Afps_cppGameMode::Afps_cppGameMode() : AGameModeBase()
 		GameRoomBGM = GameRoomBGMFinder.Object;
 	}
 	
-	RespawnTime = 1.0f;
+	RespawnTime = 3.0f;
 }
 
 void Afps_cppGameMode::BeginPlay()
@@ -70,8 +70,7 @@ void Afps_cppGameMode::Tick(float DeltaSeconds)
 
 			if (PlayerState && PlayerState->GetIsDead())
 			{
-				UE_LOG(LogTemp, Log, TEXT("Respawn!!"));
-				RespawnFunction(MyPlayerController, PlayerState);
+				Respawn(MyPlayerController, PlayerState);
 			}
 		}
 	}
@@ -134,12 +133,18 @@ void Afps_cppGameMode::Logout(AController* Exiting)
 	Super::Logout(Exiting);
 }
 
-void Afps_cppGameMode::Respawn()
+void Afps_cppGameMode::Respawn(Afps_cppPlayerController* PlayerController, Afps_cppPlayerState* PlayerState)
 {
-	/*if (GetWorld())
+	if (GetWorld() && !PlayerRespawnRequested.Contains(PlayerState))
 	{
-		GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, this, &Afps_cppGameMode::RespawnFunction, RespawnTime, false);
-	}*/
+		FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &Afps_cppGameMode::RespawnFunction, PlayerController, PlayerState);
+
+		FTimerHandle& RespawnTimerHandle = PlayerRespawnTimers.FindOrAdd(PlayerState);
+		GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, RespawnDelegate, RespawnTime, false);
+
+		// 부활 요청된 플레이어 상태를 추가
+		PlayerRespawnRequested.Add(PlayerState);
+	}
 }
 
 void Afps_cppGameMode::RespawnFunction(Afps_cppPlayerController* PlayerController, Afps_cppPlayerState* PlayerState)
@@ -154,12 +159,29 @@ void Afps_cppGameMode::RespawnFunction(Afps_cppPlayerController* PlayerControlle
 			FActorSpawnParameters SpawnParams;
 			SpawnParams.Owner = PlayerController;
 
+			APawn* OldPawn = PlayerController->GetPawn();
+			if (OldPawn)
+			{
+				OldPawn->Destroy();
+			}
+
 			Afps_cppCharacter* NewPawn = World->SpawnActor<Afps_cppCharacter>(DefaultPawnClass, SpawnLocation, SpawnRotation, SpawnParams);
 			if (NewPawn)
 			{
 				PlayerController->Possess(NewPawn);
-				PlayerState->SetIsDead(false); // PlayerState의 IsDead 상태를 리셋
-				UE_LOG(LogTemp, Log, TEXT("Player has been respawned and possessed by the controller"));
+
+				if (HasAuthority())
+				{
+					NewPawn->ActivateObjectMulticast();
+				}
+				else
+				{
+					NewPawn->ActivateObjectServer();
+				}
+
+				// 부활 후 플래그 및 타이머 제거
+				PlayerRespawnRequested.Remove(PlayerState);
+				PlayerRespawnTimers.Remove(PlayerState);
 			}
 			else
 			{

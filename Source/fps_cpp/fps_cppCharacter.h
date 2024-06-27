@@ -418,6 +418,12 @@ public:
 	void Multicast_SetLeanRightBooleans(bool Right);
 
 	UFUNCTION(Server, Reliable, WithValidation)
+	void ActivateObjectServer();
+	// Function to handle the deactivation on clients
+	UFUNCTION(NetMulticast, Reliable)
+	void ActivateObjectMulticast();
+
+	UFUNCTION(Server, Reliable, WithValidation)
 	void DeactivateObjectServer();
 	// Function to handle the deactivation on clients
 	UFUNCTION(NetMulticast, Reliable)
@@ -514,6 +520,10 @@ protected:
 	void PlayReloadSequenceMulticast_Implementation(EItemTypeEnum WeaponType);
 	void PlayReloadSequenceServer_Implementation(EItemTypeEnum WeaponType);
 	bool PlayReloadSequenceServer_Validate(EItemTypeEnum WeaponType);
+
+	void ActivateObjectServer_Implementation();
+	bool ActivateObjectServer_Validate();
+	void ActivateObjectMulticast_Implementation();
 
 	void DeactivateObjectServer_Implementation();
 	bool DeactivateObjectServer_Validate();

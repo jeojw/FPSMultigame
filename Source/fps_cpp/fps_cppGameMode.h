@@ -24,7 +24,7 @@ public:
 
 	void StartGame();
 	
-	void Respawn();
+	void Respawn(Afps_cppPlayerController* PlayerController, Afps_cppPlayerState* PlayerState);
 	void RespawnFunction(Afps_cppPlayerController* PlayerController, Afps_cppPlayerState* PlayerState);
 
 	void CreateDefaultSaveGame();
@@ -39,6 +39,9 @@ protected:
 private:
 	void InitializeNetworkSettings();
 
+	TMap<Afps_cppPlayerState*, bool> PlayerRespawnRequested;
+
+	TMap<Afps_cppPlayerState*, FTimerHandle> PlayerRespawnTimers;
 
 	UPROPERTY(EditAnywhere)
 	USoundWave* StartBGM;
@@ -48,8 +51,6 @@ private:
 
 	UPROPERTY()
 	UAudioComponent* StartBGMAudioComponent;
-
-	FTimerHandle RespawnTimerHandle;
 };
 
 

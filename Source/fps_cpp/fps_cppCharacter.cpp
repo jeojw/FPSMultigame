@@ -53,7 +53,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	BodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BodyMesh"));
 	BodyMesh->SetupAttachment(RootComponent);
-	BodyMesh->SetRelativeLocationAndRotation(FVector(0, 0, -90.0f), FQuat(FRotator(0, -90.0f, 0)));
+	BodyMesh->SetRelativeLocationAndRotation(FVector(0, 0, -95.0f), FQuat(FRotator(0, -90.0f, 0)));
 	BodyMesh->SetOwnerNoSee(true);
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> PlayerMeshFinder(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny"));
@@ -1758,13 +1758,35 @@ bool Afps_cppCharacter::PlayReloadSequenceServer_Validate(EItemTypeEnum WeaponTy
 	return true;
 }
 
+void Afps_cppCharacter::ActivateObjectMulticast_Implementation()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCharacterMovement()->GravityScale = 1.0f;
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+
+	if (FPSPlayerState)
+	{
+		FPSPlayerState->SetHealth(FPSPlayerState->GetMaxHealth());
+		FPSPlayerState->SetIsDead(false);
+	}
+}
+
+void Afps_cppCharacter::ActivateObjectServer_Implementation()
+{
+	ActivateObjectMulticast();
+}
+
+bool Afps_cppCharacter::ActivateObjectServer_Validate()
+{
+	return true;
+}
+
 void Afps_cppCharacter::DeactivateObjectMulticast_Implementation()
 {
 	DestroyWeapon();
+
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
 	GetCharacterMovement()->GravityScale = 0.0f;
-
 	GetCharacterMovement()->DisableMovement();
 }
 

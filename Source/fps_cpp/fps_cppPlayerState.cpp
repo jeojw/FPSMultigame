@@ -10,8 +10,6 @@ Afps_cppPlayerState::Afps_cppPlayerState()
 {
 	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
 
-	bReplicates = true;
-
 	AnimState = EAnimStateEnum::Rifle;
 	CurrentItemSelection = 0;
 	DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/DT_ItemData"));
