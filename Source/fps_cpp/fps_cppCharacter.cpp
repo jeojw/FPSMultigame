@@ -77,7 +77,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	WeaponBase->SetupAttachment(BodyMesh, FName(TEXT("WeaponSocket")));
 	WeaponBase->SetRelativeLocationAndRotation(FVector(-5.71417f, 2.633132f, -2.075797f), FQuat(FRotator(14.103956f, 91.855026f, -8.38177f)));
 	WeaponBase->SetIsReplicated(true);
-	WeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
+	WeaponBase->SetChildActorClass(AWeapon_Base_M4::StaticClass());
 
 	OriginMeshVector = FVector(-11.0f, -4.686809f, -147.949827f);
 
@@ -97,7 +97,7 @@ Afps_cppCharacter::Afps_cppCharacter()
 	FPSWeaponBase->SetupAttachment(FPSMesh, FName(TEXT("WeaponSocket")));
 	FPSWeaponBase->SetRelativeLocationAndRotation(FVector(-6.916288f, 5.297911f, -1.021789f), FQuat(FRotator(13.512249f, 94.096334f, -7.351546f)));
 	FPSWeaponBase->SetIsReplicated(true);
-	FPSWeaponBase->SetChildActorClass(AWeapon_Base::StaticClass());
+	FPSWeaponBase->SetChildActorClass(AWeapon_Base_M4::StaticClass());
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -112,9 +112,11 @@ Afps_cppCharacter::Afps_cppCharacter()
 	bIsAttacking = false;
 	bIsReloading = false;
 
-	GetCharacterMovement()->MaxWalkSpeed = 350.0f;
+	CurrentWeaponClass = AWeapon_Base_M4::StaticClass();
+	CurrentWeaponType = EItemTypeEnum::Rifle;
+	CurrentAnimState = EAnimStateEnum::Rifle;
 
-	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
+	GetCharacterMovement()->MaxWalkSpeed = 350.0f;
 
 	Tags.Add(FName("Flesh"));
 	Tags.Add(FName("Player"));
@@ -124,6 +126,8 @@ Afps_cppCharacter::Afps_cppCharacter()
 
 	PistolLocation = FVector(-6.916288f, 5.297911f, -1.021789f);
 	PistolRotation = FRotator(13.512249f, 82.151696f, -7.351546f);
+
+	DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/DT_ItemData"));
 
 	static ConstructorHelpers::FObjectFinder< UInputMappingContext> IMC_DefualtFinder(TEXT("/Game/ThirdPerson/Input/IMC_Default"));
 	if (IMC_DefualtFinder.Succeeded())
@@ -685,17 +689,14 @@ void Afps_cppCharacter::ApplyRecoil(float PitchValue, float YawValue)
 void Afps_cppCharacter::ControllerRecoil(float Value)
 {
 	float CurveValue = bRecoilCurve->GetFloatValue(Value);
-	if (FPSPlayerState)
-	{
-		float PitchValue = FMath::Lerp(0.0f, FPSPlayerState->GetCurrentStats().InputRecoil, CurveValue);
-		float YawValue = FMath::Lerp(0.0f, FPSPlayerState->GetCurrentStats().InputRecoil, CurveValue);
-		ApplyRecoil(PitchValue, YawValue);
-	}
+	float PitchValue = FMath::Lerp(0.0f, CurrentStats.InputRecoil, CurveValue);
+	float YawValue = FMath::Lerp(0.0f, CurrentStats.InputRecoil, CurveValue);
+	ApplyRecoil(PitchValue, YawValue);
 }
 
 void Afps_cppCharacter::ControlAim(float Value)
 {
-	if (FPSPlayerState && !FPSPlayerState->GetIsDead() && FPSPlayerState->GetAnimState() != EAnimStateEnum::Melee)
+	if (FPSPlayerState && !FPSPlayerState->GetIsDead() && CurrentAnimState != EAnimStateEnum::Melee)
 	{
 		FVector AimMeshVector;
 		FVector AimWeaponVector;
@@ -703,7 +704,7 @@ void Afps_cppCharacter::ControlAim(float Value)
 		FVector OriginWeaponVector;
 		FRotator OriginWeaponRotator;
 		float AimFieldOfView;
-		if (FPSPlayerState->GetCurrentWeaponType() == EItemTypeEnum::Rifle)
+		if (CurrentWeaponType == EItemTypeEnum::Rifle)
 		{
 			AimMeshVector = FVector(OriginMeshVector.X, -20.05f, OriginMeshVector.Z);
 			AimFieldOfView = 14.240001f;
@@ -774,7 +775,7 @@ void Afps_cppCharacter::Fire()
 	{
 		bIsAttacking = true;
 
-		switch (FPSPlayerState->GetCurrentWeaponType())
+		switch (CurrentWeaponType)
 		{
 		case EItemTypeEnum::Pistol:
 			PistolFire();
@@ -804,7 +805,7 @@ void Afps_cppCharacter::RifleFire()
 					bFireCooldownTimer,
 					this,
 					&Afps_cppCharacter::ResetFireRifle,
-					FPSPlayerState->GetCurrentStats().FireRate,
+					CurrentStats.FireRate,
 					false
 				);
 				FPSPlayerState->ReduceCurrentBullet(0);
@@ -826,13 +827,12 @@ void Afps_cppCharacter::RifleFire()
 						if (BodyMesh->GetAnimInstance() &&
 							FPSMesh->GetAnimInstance())
 						{
-							FWeaponStatsStruct bCurrentStats = FPSPlayerState->GetCurrentStats();
 							UFunction* F_Procedural_Recoil = BodyMesh->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
 							UFunction* F_Procedural_Recoil_FPS = FPSMesh->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
 							if (F_Procedural_Recoil && F_Procedural_Recoil_FPS)
 							{
-								BodyMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
-								FPSMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil_FPS, &bCurrentStats.ProceduralRecoil);
+								BodyMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &CurrentStats.ProceduralRecoil);
+								FPSMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil_FPS, &CurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
 									PlayShotSequenceMulticast(EItemTypeEnum::Rifle);
@@ -841,7 +841,7 @@ void Afps_cppCharacter::RifleFire()
 								{
 									PlayShotSequenceServer(EItemTypeEnum::Rifle);
 								}
-								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, FPSPlayerState->GetCurrentStats().FireRate, false);
+								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, CurrentStats.FireRate, false);
 							}
 						}
 						else
@@ -872,7 +872,7 @@ void Afps_cppCharacter::PistolFire()
 					bFireCooldownTimer,
 					this,
 					&Afps_cppCharacter::ResetFireRifle,
-					FPSPlayerState->GetCurrentStats().FireRate,
+					CurrentStats.FireRate,
 					false
 				);
 				FPSPlayerState->ReduceCurrentBullet(1);
@@ -898,10 +898,8 @@ void Afps_cppCharacter::PistolFire()
 							UFunction* F_Procedural_Recoil_FPS = FPSMesh->GetAnimInstance()->FindFunction(TEXT("f_ProceduralRecoil"));
 							if (F_Procedural_Recoil && F_Procedural_Recoil_FPS)
 							{
-								FWeaponStatsStruct bCurrentStats = FPSPlayerState->GetCurrentStats();
-
-								BodyMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &bCurrentStats.ProceduralRecoil);
-								FPSMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil_FPS, &bCurrentStats.ProceduralRecoil);
+								BodyMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil, &CurrentStats.ProceduralRecoil);
+								FPSMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil_FPS, &CurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
 									PlayShotSequenceMulticast(EItemTypeEnum::Pistol);
@@ -910,7 +908,7 @@ void Afps_cppCharacter::PistolFire()
 								{
 									PlayShotSequenceServer(EItemTypeEnum::Pistol);
 								}
-								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, FPSPlayerState->GetCurrentStats().FireRate, false);
+								GetWorld()->GetTimerManager().SetTimer(bFireRateTimer, this, &Afps_cppCharacter::FireDelayCompleted, CurrentStats.FireRate, false);
 							}
 						}
 
@@ -963,18 +961,18 @@ void Afps_cppCharacter::ReloadDelayCompleted()
 		FPSPlayerState->ReloadCurrentBullet(bCurrentItemSelection);
 		if (HasAuthority())
 		{
-			FPSPlayerState->StopLeftHandIKMulticast(false);
+			StopLeftHandIKMulticast(false);
 		}
 		else
 		{
-			FPSPlayerState->StopLeftHandIKServer(false);
+			StopLeftHandIKServer(false);
 		}
 	}
 }
 
 void Afps_cppCharacter::Reload()
 {
-	if (!bIsReloading && !FPSPlayerState->GetIsDead() && FPSPlayerState->GetAnimState() != EAnimStateEnum::Melee)
+	if (!bIsReloading && !FPSPlayerState->GetIsDead() && CurrentAnimState != EAnimStateEnum::Melee)
 	{
 		bIsReloading = true;
 		if (!FPSPlayerState->GetInventory())
@@ -982,33 +980,33 @@ void Afps_cppCharacter::Reload()
 			UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
 			return;
 		}
-		if (FPSPlayerState->GetCurrentBullet(bCurrentItemSelection) < FPSPlayerState->GetCurrentStats().MagSize)
+		if (FPSPlayerState->GetCurrentBullet(bCurrentItemSelection) < CurrentStats.MagSize)
 		{
 			bIsAiming = false;
 			bIsAttacking = false;
 			if (HasAuthority())
 			{
-				FPSPlayerState->StopLeftHandIKMulticast(true);
+				StopLeftHandIKMulticast(true);
 			}
 			else
 			{
-				FPSPlayerState->StopLeftHandIKServer(true);
+				StopLeftHandIKServer(true);
 			}
 			if (WeaponBase && WeaponBase->GetChildActor() && 
 				FPSWeaponBase && FPSWeaponBase->GetChildActor())
 			{
-				if (FPSPlayerState->GetCurrentReloadAnimation())
+				if (CurrentReloadAnimation)
 				{
 					if (HasAuthority())
 					{
-						PlayAnimMontageMulticast(FPSPlayerState->GetCurrentReloadAnimation());
+						PlayAnimMontageMulticast(CurrentReloadAnimation);
 					}
 					else
 					{
-						PlayAnimMontageServer(FPSPlayerState->GetCurrentReloadAnimation());
+						PlayAnimMontageServer(CurrentReloadAnimation);
 					}
 
-					if (FPSPlayerState->GetAnimState() == EAnimStateEnum::Rifle)
+					if (CurrentAnimState == EAnimStateEnum::Rifle)
 					{
 						if (HasAuthority())
 						{
@@ -1020,7 +1018,7 @@ void Afps_cppCharacter::Reload()
 						}
 					}
 
-					else if (FPSPlayerState->GetAnimState() == EAnimStateEnum::Pistol)
+					else if (CurrentAnimState == EAnimStateEnum::Pistol)
 					{
 						if (HasAuthority())
 						{
@@ -1036,7 +1034,7 @@ void Afps_cppCharacter::Reload()
 						bFireCooldownTimer,
 						this,
 						&Afps_cppCharacter::ReloadDelayCompleted,
-						FPSPlayerState->GetCurrentStats().ReloadTime,
+						CurrentStats.ReloadTime,
 						false
 					);
 				}
@@ -1059,7 +1057,7 @@ void Afps_cppCharacter::DropItem()
 		}
 		if (FPSPlayerState->GetCurrentID(bCurrentItemSelection) > 0)
 		{
-			if (FPSPlayerState->GetInventory()->GetInventory().IsValidIndex(FPSPlayerState->GetCurrentItemSelection()))
+			if (FPSPlayerState->GetInventory()->GetInventory().IsValidIndex(bCurrentItemSelection))
 			{
 				FDynamicInventoryItem Item = FPSPlayerState->GetItem(bCurrentItemSelection);
 				FVector ForwardCameraLocation = FollowCamera->GetComponentLocation() + (FollowCamera->GetForwardVector() * 200.0);
@@ -1087,11 +1085,11 @@ void Afps_cppCharacter::DestroyWeapon()
 {
 	if (HasAuthority())
 	{
-		FPSPlayerState->StopLeftHandIKMulticast(true);
+		StopLeftHandIKMulticast(true);
 	}
 	else
 	{
-		FPSPlayerState->StopLeftHandIKServer(true);
+		StopLeftHandIKServer(true);
 	}
 	WeaponBase->DestroyChildActor();
 }
@@ -1209,21 +1207,52 @@ void Afps_cppCharacter::EquipItem(int index)
 {
 	if (FPSPlayerState)
 	{
-		FPSPlayerState->StateEquipItem(index);
-		if (FPSWeaponBase && WeaponBase && FPSPlayerState->GetCurrentWeaponClass())
-		{
-			TSubclassOf<AActor> WBase = FPSPlayerState->GetCurrentWeaponClass();
+		Afps_cppPlayerController* GetController = Cast<Afps_cppPlayerController>(GetOwner());
+		if (GetController && GetController->IsLocalController()) {
+			if (!FPSPlayerState->GetInventory()) {
+				UE_LOG(LogTemp, Error, TEXT("Inventory is nullptr"));
+				return;
+			}
 
-			if (WBase)
+			int CurrentSelection = index;
+			if (!FPSPlayerState->GetInventory()->GetInventory().IsValidIndex(CurrentSelection)) {
+				UE_LOG(LogTemp, Error, TEXT("Invalid inventory index: %d"), CurrentSelection);
+				return;
+			}
+
+			int id = FPSPlayerState->GetCurrentID(index);
+			FString fname = FString::FromInt(id);
+			if (DT_ItemData) {
+				TArray<FName> RowNames = DT_ItemData->GetRowNames();
+				for (int i = 0; i < RowNames.Num(); i++) {
+					if (RowNames[i] == fname)
+					{
+						FItemDataTable* data = DT_ItemData->FindRow<FItemDataTable>(RowNames[i], RowNames[i].ToString());
+						if (data)
+						{
+							bool bStop = (data->AnimState == EAnimStateEnum::Melee);
+							if (HasAuthority())
+							{
+								SetWeaponDataMulticast(data->WeaponClass, data->Stats, data->AnimState, bStop, data->Type);
+							}
+							else
+							{
+								SetWeaponDataServer(data->WeaponClass, data->Stats, data->AnimState, bStop, data->Type);
+							}
+							SetCurrentReloadAnimation(data->ReloadAnimation);
+							SetWeaponIcon(data->icon);
+						}
+						else
+						{
+							UE_LOG(LogTemp, Error, TEXT("Failed to find data for item %s"), *fname);
+						}
+						break;
+					}
+				}
+			}
+			else
 			{
-				if (HasAuthority())
-				{
-					SetWeaponClassMulticast(WBase);
-				}
-				else
-				{
-					SetWeaponClassServer(WBase);
-				}
+				UE_LOG(LogTemp, Error, TEXT("Failed to load item data table"));
 			}
 		}
 	}
@@ -1236,7 +1265,7 @@ void Afps_cppCharacter::FireProjectileToDirection()
 	MuzzlePointLocalLocation = MuzzlePoint.GetLocation();
 
 	FVector Start = MuzzlePointLocalLocation;
-	FVector End = Start + FollowCamera->GetForwardVector() * FPSPlayerState->GetCurrentStats().Range;
+	FVector End = Start + FollowCamera->GetForwardVector() * CurrentStats.Range;
 	FHitResult HitResult;
 
 	bool bHit = GetWorld()->LineTraceSingleByChannel(
@@ -1310,27 +1339,21 @@ void Afps_cppCharacter::FireProjectileToDirection()
 
 void Afps_cppCharacter::ReceiveImpactProjectile(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal)
 {
-	if (FPSPlayerState && actor)
+	if (HasAuthority())
 	{
-		if (HasAuthority())
-		{
-			ApplyDamage(actor, FPSPlayerState->GetCurrentStats().Damage, this);
-			HandleImpactEffectsServer(actor, Loc, Normal);
-		}
-		else
-		{
-			ServerReceiveImpactProjectile(actor, comp, Loc, Normal);
-		}
+		ApplyDamage(actor, CurrentStats.Damage, this);
+		HandleImpactEffectsServer(actor, Loc, Normal);
+	}
+	else
+	{
+		ServerReceiveImpactProjectile(actor, comp, Loc, Normal);
 	}
 }
 
 void Afps_cppCharacter::ServerReceiveImpactProjectile_Implementation(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal)
 {
-	if (FPSPlayerState)
-	{
-		ApplyDamage(actor, FPSPlayerState->GetCurrentStats().Damage, this);
-		HandleImpactEffectsServer(actor, Loc, Normal);
-	}
+	ApplyDamage(actor, CurrentStats.Damage, this);
+	HandleImpactEffectsServer(actor, Loc, Normal);
 }
 
 bool Afps_cppCharacter::ServerReceiveImpactProjectile_Validate(AActor* actor, UActorComponent* comp, FVector Loc, FVector Normal)
@@ -1360,16 +1383,13 @@ void Afps_cppCharacter::HandleImpactEffects(AActor* actor, FVector Loc, FVector 
 	SpawnBulletHoleMulticast(tmpTransform);
 
 	USoundCue* WeaponSound = nullptr;
-	if (FPSPlayerState)
+	if (CurrentWeaponClass == AWeapon_Base_M4::StaticClass())
 	{
-		if (FPSPlayerState->GetCurrentWeaponClass() == AWeapon_Base_M4::StaticClass())
-		{
-			WeaponSound = RifleSurfaceImpactSoundCue;
-		}
-		else if (FPSPlayerState->GetCurrentWeaponClass() == AWeapon_Base_Pistol::StaticClass())
-		{
-			WeaponSound = PistolSurfaceImpactSoundCue;
-		}
+		WeaponSound = RifleSurfaceImpactSoundCue;
+	}
+	else if (CurrentWeaponClass == AWeapon_Base_Pistol::StaticClass())
+	{
+		WeaponSound = PistolSurfaceImpactSoundCue;
 	}
 	
 	if (actor->ActorHasTag("Metal"))
@@ -1639,25 +1659,15 @@ bool Afps_cppCharacter::SetLeanRightServer_Validate(bool LeanRight)
 	return true;
 }
 
-void Afps_cppCharacter::OnRep_LeanLeft()
-{
-	
-}
-void Afps_cppCharacter::OnRep_LeanRight()
-{
-	
-}
 
 void Afps_cppCharacter::Multicast_SetLeanLeftBooleans_Implementation(bool Left)
 {
 	bLeanLeft = Left;
-	OnRep_LeanLeft();
 }
 
 void Afps_cppCharacter::Multicast_SetLeanRightBooleans_Implementation(bool Right)
 {
 	bLeanRight = Right;
-	OnRep_LeanRight();
 }
 
 
@@ -1800,70 +1810,100 @@ bool Afps_cppCharacter::DeactivateObjectServer_Validate()
 	return true;
 }
 
-void Afps_cppCharacter::SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase)
+void Afps_cppCharacter::SetWeaponDataServer_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType)
 {
-	WeaponBase->SetChildActorClass(WBase);
-	FPSWeaponBase->SetChildActorClass(WBase);
+	SetWeaponDataMulticast(WeaponClass, Stats, AnimState, bStop, WeaponType);
+}
 
-	AActor* WeaponBaseChild = WeaponBase->GetChildActor();
-	if (WeaponBaseChild)
+bool Afps_cppCharacter::SetWeaponDataServer_Validate(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType)
+{
+	return true;
+}
+
+void Afps_cppCharacter::SetWeaponDataMulticast_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType)
+{
+	CurrentWeaponClass = WeaponClass;
+	CurrentStats = Stats;
+	CurrentAnimState = AnimState;
+	bStopLeftHandIK = bStop;
+	CurrentWeaponType = WeaponType;
+
+	if (FPSWeaponBase && WeaponBase && CurrentWeaponClass)
 	{
-		WeaponBaseChild->SetOwner(this);
-		if (FPSPlayerState->GetCurrentWeaponType() == EItemTypeEnum::Rifle)
+		UE_LOG(LogTemp, Error, TEXT("Weapon data set: %s"), *CurrentWeaponClass->GetName());
+
+		if (CurrentWeaponClass)
 		{
-			AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
-			if (M4)
+			FPSWeaponBase->SetChildActorClass(CurrentWeaponClass);
+			WeaponBase->SetChildActorClass(CurrentWeaponClass);
+
+			AActor* WeaponBaseChild = WeaponBase->GetChildActor();
+			if (WeaponBaseChild)
 			{
-				M4->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
-				M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+				WeaponBaseChild->SetOwner(this);
+				if (CurrentWeaponType == EItemTypeEnum::Rifle)
+				{
+					AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
+					if (M4)
+					{
+						M4->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
+						M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+					}
+				}
+				else if (CurrentWeaponType == EItemTypeEnum::Pistol)
+				{
+					AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
+					if (Pistol)
+					{
+						Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
+						Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+					}
+				}
 			}
-		}
-		else if (FPSPlayerState->GetCurrentWeaponType() == EItemTypeEnum::Pistol)
-		{
-			AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
-			if (Pistol)
+
+			AActor* FPSWeaponBaseChild = FPSWeaponBase->GetChildActor();
+			if (FPSWeaponBaseChild)
 			{
-				Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
-				Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
+				FPSWeaponBaseChild->SetOwner(this);
+				if (CurrentWeaponType == EItemTypeEnum::Rifle)
+				{
+					FPSWeaponBase->SetRelativeLocation(M4Location);
+					FPSWeaponBase->SetRelativeRotation(M4Rotation);
+					AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
+					if (M4)
+					{
+						M4->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
+						M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
+					}
+				}
+				else if (CurrentWeaponType == EItemTypeEnum::Pistol)
+				{
+					FPSWeaponBase->SetRelativeLocation(PistolLocation);
+					FPSWeaponBase->SetRelativeRotation(PistolRotation);
+					AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
+					if (Pistol)
+					{
+						Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
+						Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
+					}
+				}
 			}
 		}
 	}
-
-	AActor* FPSWeaponBaseChild = FPSWeaponBase->GetChildActor();
-	if (FPSWeaponBaseChild)
-	{
-		FPSWeaponBaseChild->SetOwner(this);
-		if (FPSPlayerState->GetCurrentWeaponType() == EItemTypeEnum::Rifle)
-		{
-			FPSWeaponBase->SetRelativeLocation(M4Location);
-			FPSWeaponBase->SetRelativeRotation(M4Rotation);
-			AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
-			if (M4)
-			{
-				M4->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
-				M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
-			}
-		}
-		else if (FPSPlayerState->GetCurrentWeaponType() == EItemTypeEnum::Pistol)
-		{
-			FPSWeaponBase->SetRelativeLocation(PistolLocation);
-			FPSWeaponBase->SetRelativeRotation(PistolRotation);
-			AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
-			if (Pistol)
-			{
-				Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
-				Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
-			}
-		}
-	}
+	UE_LOG(LogTemp, Log, TEXT("Weapon data set: %s"), *WeaponClass->GetName());
 }
 
-void Afps_cppCharacter::SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase)
+void Afps_cppCharacter::StopLeftHandIKMulticast_Implementation(bool bStop)
 {
-	SetWeaponClassMulticast(WBase);
+	bStopLeftHandIK = bStop;
 }
 
-bool Afps_cppCharacter::SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase)
+void Afps_cppCharacter::StopLeftHandIKServer_Implementation(bool bStop)
+{
+	StopLeftHandIKMulticast(bStop);
+}
+
+bool Afps_cppCharacter::StopLeftHandIKServer_Validate(bool bStop)
 {
 	return true;
 }
@@ -1872,13 +1912,12 @@ void Afps_cppCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(Afps_cppCharacter, bLeanLeft);
-	DOREPLIFETIME(Afps_cppCharacter, bLeanRight);
-
 	DOREPLIFETIME(Afps_cppCharacter, bSoundPlaying);
-	DOREPLIFETIME(Afps_cppCharacter, FPSPlayerState);
+	DOREPLIFETIME(Afps_cppCharacter, CurrentWeaponType);
+	DOREPLIFETIME(Afps_cppCharacter, CurrentAnimState);
+	DOREPLIFETIME(Afps_cppCharacter, CurrentStats);
+	DOREPLIFETIME(Afps_cppCharacter, CurrentWeaponClass);
 
-	DOREPLIFETIME(Afps_cppCharacter, bCurrentWeaponClass);
 }
 
 void Afps_cppCharacter::IF_GetLeftHandSocketTransform_Implementation(FTransform& OutTransform)
@@ -1998,10 +2037,8 @@ void Afps_cppCharacter::IF_GetIsAim_Implementation(bool& Aim)
 
 void Afps_cppCharacter::IF_GetStopLeftHandIK_Implementation(bool& StopIK)
 {
-	if (FPSPlayerState)
-	{
-		StopIK = FPSPlayerState->GetStopHandLeftIK();
-	}
+
+	StopIK = bStopLeftHandIK;
 }
 
 void Afps_cppCharacter::IF_GetWallDistance_Implementation(float& Value)
@@ -2034,10 +2071,7 @@ void Afps_cppCharacter::IF_AddItemToInventory_Implementation(const FDynamicInven
 
 void Afps_cppCharacter::IF_GetAnimState_Implementation(EAnimStateEnum& AnimState)
 {
-	if (FPSPlayerState)
-	{
-		AnimState = FPSPlayerState->GetAnimState();
-	}
+	AnimState = CurrentAnimState;
 }
 
 void Afps_cppCharacter::IF_GetAimAlpha_Implementation(float& A)

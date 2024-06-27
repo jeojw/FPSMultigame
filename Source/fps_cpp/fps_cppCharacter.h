@@ -53,9 +53,6 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	USkeletalMeshComponent* FPSMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UInventory* InventoryComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
 	Afps_cppPlayerState* FPSPlayerState;
 	
 	/** MappingContext */
@@ -128,10 +125,10 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bJumping;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_LeanLeft, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bLeanLeft;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_LeanRight, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bLeanRight;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
@@ -154,9 +151,6 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	FTimerHandle bFireCooldownTimer;
-
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<AActor> bCurrentWeaponClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<APickUpBase> bCurrentWeaponPickUpClass;
@@ -208,10 +202,6 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 	void ReloadDelayCompleted();
 
 	void CheckWallTick();
-
-	UPROPERTY(VisibleAnywhere, Replicated, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<AActor> CurrentWeaponClass;
-
 	FTimerHandle WalkTimerHandle;
 	FTimerHandle RunTimerHandle;
 
@@ -224,6 +214,27 @@ class Afps_cppCharacter : public ACharacter, public IPlayerInterface
 
 	FVector PistolLocation;
 	FRotator PistolRotation;
+
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AActor> CurrentWeaponClass;
+
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	FWeaponStatsStruct CurrentStats;
+
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	EAnimStateEnum CurrentAnimState;
+
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	EItemTypeEnum CurrentWeaponType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* CurrentReloadAnimation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPaperSprite* WeaponIcon;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UDataTable* DT_ItemData;
 
 public:
 	Afps_cppCharacter();
@@ -265,8 +276,13 @@ public:
 	FTransform GetLeftHandSocketTransform() const { return bLeftHandSocketTransform; }
 	void SetLeftHandSocketTransoform(FTransform LeftHandSocketTransform) { bLeftHandSocketTransform = LeftHandSocketTransform; }
 
-	UInventory* GetInventory() const { return InventoryComponent; }
+	UAnimMontage* GetCurrentReloadAnimation() const { return CurrentReloadAnimation; }
+	void SetCurrentReloadAnimation(UAnimMontage* _CurrentReloadAnimation) { CurrentReloadAnimation = _CurrentReloadAnimation; }
 
+	UPaperSprite* GetWeaponIcon() const { return WeaponIcon; }
+	void SetWeaponIcon(UPaperSprite* NewIcon) { WeaponIcon = NewIcon; }
+
+	UFUNCTION(BlueprintCallable)
 	Afps_cppPlayerState* GetFPSPlayerState() const { return FPSPlayerState; }
 
 	UFUNCTION()
@@ -368,12 +384,6 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void PlayAnimMontageServer(UAnimMontage* AnimMontage);
 
-	UFUNCTION()
-	void OnRep_LeanLeft();
-
-	UFUNCTION()
-	void OnRep_LeanRight();
-
 	UFUNCTION(NetMulticast, Reliable)
 	void SpawnBulletHoleMulticast(FTransform SpawnTransform);
 
@@ -430,9 +440,16 @@ public:
 	void DeactivateObjectMulticast();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void SetWeaponClassMulticast(TSubclassOf<AActor> WBase);
-	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
-	void SetWeaponClassServer(TSubclassOf<AActor> WBase);
+	void SetWeaponDataMulticast(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void SetWeaponDataServer(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void StopLeftHandIKMulticast(bool bStop);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void StopLeftHandIKServer(bool bStop);
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
@@ -528,10 +545,14 @@ protected:
 	void DeactivateObjectServer_Implementation();
 	bool DeactivateObjectServer_Validate();
 	void DeactivateObjectMulticast_Implementation();
-	
-	void SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase);
-	void SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase);
-	bool SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase);
+
+	void StopLeftHandIKMulticast_Implementation(bool bStop);
+	void StopLeftHandIKServer_Implementation(bool bStop);
+	bool StopLeftHandIKServer_Validate(bool bStop);
+
+	void SetWeaponDataMulticast_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStopLeftHandIK, EItemTypeEnum WeaponType);
+	void SetWeaponDataServer_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStopLeftHandIK, EItemTypeEnum WeaponType);
+	bool SetWeaponDataServer_Validate(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStopLeftHandIK, EItemTypeEnum WeaponType);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

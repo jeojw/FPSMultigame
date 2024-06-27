@@ -17,8 +17,7 @@
  * 
  */
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAnimStateChangedEvent);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnWeaponClassChanged);
+class Afps_cppCharacter;
 
 UCLASS()
 class FPS_CPP_API Afps_cppPlayerState : public APlayerState
@@ -43,26 +42,20 @@ class FPS_CPP_API Afps_cppPlayerState : public APlayerState
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	int CurrentItemSelection;
 
-	UPROPERTY(EditAnywhere, ReplicatedUsing = OnRep_CurrentWeaponClass, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<AActor> CurrentWeaponClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	FWeaponStatsStruct CurrentStats;
 
-	UPROPERTY(BlueprintAssignable)
-	FAnimStateChangedEvent OnAnimStateChanged;
-
-	UPROPERTY(BlueprintAssignable)
-	FOnWeaponClassChanged OnWeaponClassChanged;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AnimState, meta = (AllowPrivateAccess = "true"))
-	EAnimStateEnum AnimState;
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	EAnimStateEnum CurrentAnimState;
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool StopLeftHandIK;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	EItemTypeEnum WeaponType;
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	EItemTypeEnum CurrentWeaponType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* CurrentReloadAnimation;
@@ -100,11 +93,13 @@ public:
 	void SetCurrentItemSelection(int CurItem) { CurrentItemSelection = CurItem; }
 
 	TSubclassOf<AActor> GetCurrentWeaponClass() const { return CurrentWeaponClass; }
+	void SetCurrentWeaponClass(TSubclassOf<AActor> _Weapon) { CurrentWeaponClass = _Weapon; }
 
 	FWeaponStatsStruct GetCurrentStats() const { return CurrentStats; }
+	void SetCurrentStats(FWeaponStatsStruct _Stats) { CurrentStats = _Stats; }
 
-	EItemTypeEnum GetCurrentWeaponType() const { return WeaponType; }
-	void SetCurretnWeaponType(EItemTypeEnum _Weapontype) { WeaponType = _Weapontype; }
+	EItemTypeEnum GetCurrentWeaponType() const { return CurrentWeaponType; }
+	void SetCurretnWeaponType(EItemTypeEnum _Weapontype) { CurrentWeaponType = _Weapontype; }
 
 	UAnimMontage* GetCurrentReloadAnimation() const { return CurrentReloadAnimation; }
 	void SetCurrentReloadAnimation(UAnimMontage* _CurrentReloadAnimation) { CurrentReloadAnimation = _CurrentReloadAnimation; }
@@ -112,35 +107,14 @@ public:
 	UPaperSprite* GetWeaponIcon() const { return WeaponIcon; }
 	void SetWeaponIcon(UPaperSprite* NewIcon) { WeaponIcon = NewIcon; }
 
-	EAnimStateEnum GetAnimState() const { return AnimState; }
-	void SetAnimState(EAnimStateEnum CurAnimState) { AnimState = CurAnimState; }
-
-	UFUNCTION()
-	void OnRep_AnimState();
-
-	UFUNCTION()
-	void OnRep_CurrentWeaponClass();
-
-	UFUNCTION()
-	void StateEquipItem(int index);
+	EAnimStateEnum GetAnimState() const { return CurrentAnimState; }
+	void SetAnimState(EAnimStateEnum CurAnimState) { CurrentAnimState = CurAnimState; }
 
 	UFUNCTION(NetMulticast, Reliable)
-	void SetWeaponClassMulticast(TSubclassOf<AActor> WeaponClass);
+	void SetWeaponDataMulticast(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
 
 	UFUNCTION(Server, Reliable, WithValidation)
-	void SetWeaponClassServer(TSubclassOf<AActor> WeaponClass);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void SetStatsToMulticast(FWeaponStatsStruct Stats);
-
-	UFUNCTION(Server, Reliable, WithValidation)
-	void SetStatsToServer(FWeaponStatsStruct Stats);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void SetAnimStateMulticast(EAnimStateEnum CurAnimState);
-
-	UFUNCTION(Server, Reliable, WithValidation)
-	void SetAnimStateServer(EAnimStateEnum CurAnimState);
+	void SetWeaponDataServer(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void StopLeftHandIKMulticast(bool bStop);
@@ -148,22 +122,14 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void StopLeftHandIKServer(bool bStop);
 
-	void SetWeaponClassMulticast_Implementation(TSubclassOf<AActor> WBase);
-	void SetWeaponClassServer_Implementation(TSubclassOf<AActor> WBase);
-	bool SetWeaponClassServer_Validate(TSubclassOf<AActor> WBase);
-
 	void StopLeftHandIKMulticast_Implementation(bool bStop);
 	void StopLeftHandIKServer_Implementation(bool bStop);
 	bool StopLeftHandIKServer_Validate(bool bStop);
 
-	void SetStatsToMulticast_Implementation(FWeaponStatsStruct CurrentStats);
-	void SetStatsToServer_Implementation(FWeaponStatsStruct CurrentStats);
-	bool SetStatsToServer_Validate(FWeaponStatsStruct CurrentStats);
+	void SetWeaponDataMulticast_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
+	void SetWeaponDataServer_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
+	bool SetWeaponDataServer_Validate(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
 
-	void SetAnimStateMulticast_Implementation(EAnimStateEnum CurAnimState);
-	void SetAnimStateServer_Implementation(EAnimStateEnum CurAnimState);
-	bool SetAnimStateServer_Validate(EAnimStateEnum CurAnimState);
-
-
+protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };
