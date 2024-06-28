@@ -53,7 +53,7 @@ class FPS_CPP_API UPlayerWidget : public UUserWidget
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* RespawnBar;
 
-	UPROPERTY()
+	UPROPERTY(Transient)
 	Afps_cppPlayerState* PlayerState;
 
 	UPROPERTY()
@@ -66,7 +66,6 @@ class FPS_CPP_API UPlayerWidget : public UUserWidget
 	EItemTypeEnum CurItem;
 	int CurPistols;
 
-	void FetchPlayerCharacter();
 	void UpdatePlayerState();
 
 protected:

@@ -112,20 +112,6 @@ void Afps_cppGameMode::PostLogin(APlayerController* NewPlayer)
 			UE_LOG(LogTemp, Error, TEXT("Player or PlayerState is null in GameMode PostLogin."));
 		}
 	}
-
-	//FVector SpawnLocation(1000.0f, 600.0f, 0.0f);
-	//FRotator SpawnRotation(0.0f, 0.0f, 0.0f);
-
-	//// 스폰 매개변수 설정
-	//FActorSpawnParameters SpawnParams;
-	//SpawnParams.Owner = this;
-	//SpawnParams.Instigator = GetInstigator();
-
-	//APawn* NewCharacter = GetWorld()->SpawnActor<APawn>(PlayerPawnBPClass, SpawnLocation, SpawnRotation, SpawnParams);
-	//if (NewCharacter)
-	//{
-	//	NewPlayer->Possess(NewCharacter);
-	//}
 }
 
 void Afps_cppGameMode::Logout(AController* Exiting)

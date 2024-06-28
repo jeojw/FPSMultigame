@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "fps_cppPlayerState.h"
 #include "fps_cppPlayerController.generated.h"
 
 /**
@@ -47,19 +46,19 @@ protected:
 	TSubclassOf<UUserWidget> OptionWidgetClass;
 
 private:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(Transient)
 	UUserWidget* PlayerUIWidgetInstance;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(Transient)
 	UUserWidget* SignupWidgetInstance;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(Transient)
 	UUserWidget* LoginWidgetInstance;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(Transient)
 	UUserWidget* StartWidgetInstance;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(Transient)
 	UUserWidget* OptionWidgetInstance;
 
 	UFUNCTION()

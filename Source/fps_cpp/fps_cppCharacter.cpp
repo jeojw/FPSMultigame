@@ -23,9 +23,6 @@
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
-//////////////////////////////////////////////////////////////////////////
-// Afps_cppCharacter
-
 Afps_cppCharacter::Afps_cppCharacter()
 {
 	// Set size for collision capsule

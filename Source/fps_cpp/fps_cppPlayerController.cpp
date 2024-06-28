@@ -43,7 +43,6 @@ Afps_cppPlayerController::Afps_cppPlayerController() : APlayerController()
 void Afps_cppPlayerController::BeginPlay()
 {
     Super::BeginPlay();
-    PlayerState = GetPlayerState<Afps_cppPlayerState>();
 
     if (IsLocalPlayerController())
     {
@@ -54,7 +53,6 @@ void Afps_cppPlayerController::BeginPlay()
 void Afps_cppPlayerController::OnPossess(APawn* aPawn)
 {
     Super::OnPossess(aPawn);
-    PlayerState = GetPlayerState<Afps_cppPlayerState>();
 
     if (IsLocalPlayerController())
     {

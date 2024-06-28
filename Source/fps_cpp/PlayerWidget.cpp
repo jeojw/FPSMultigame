@@ -31,26 +31,23 @@ void UPlayerWidget::NativeConstruct()
     }
 
     // 딜레이를 주고 플레이어 캐릭터를 가져옴
-    FetchPlayerCharacter();
-}
-
-void UPlayerWidget::FetchPlayerCharacter()
-{
-    // 타이머를 사용하여 약간의 지연 후에 플레이어 캐릭터를 가져옴
-    FTimerHandle UnusedHandle;
-    GetWorld()->GetTimerManager().SetTimer(UnusedHandle, this, &UPlayerWidget::UpdatePlayerState, 1.0f, false);
+    UpdatePlayerState();
 }
 
 void UPlayerWidget::UpdatePlayerState()
 {
-    APlayerState* GetPlayerState = UGameplayStatics::GetPlayerState(GetWorld(), 0);
-    PlayerState = Cast<Afps_cppPlayerState>(GetPlayerState);
+    APlayerController* PlayerController = GetOwningPlayer();
+    if (PlayerController)
+    {
+        Afps_cppPlayerController* FPSController = Cast<Afps_cppPlayerController>(PlayerController);
+        PlayerState = Cast<Afps_cppPlayerState>(FPSController->PlayerState);
+    }
 
     if (PlayerState)
     {
         PlayerMaxHealth = PlayerState->GetMaxHealth();
-        PlayerHealth = PlayerState->GetHealth();  // 예시 값
-        CurItem = PlayerState->GetCurrentWeaponType();  // EItemTypeEnum의 초기값 설정
+        PlayerHealth = PlayerState->GetHealth();
+        CurItem = PlayerState->GetCurrentWeaponType();
         CurItemSelection = PlayerState->GetCurrentItemSelection();
         CurPistols = PlayerState->GetInventory()->GetCurBullet(CurItemSelection);
         CurWeaponIcon = LoadObject<UPaperSprite>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/Weapons/Weapon_Icons/Weapon_Icon_WeaponIcon_12"));
