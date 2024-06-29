@@ -313,7 +313,7 @@ bool UMyDatabaseManager::InsertPlayerData(const FString& MemberID, const FString
     return true;
 }
 
-bool UMyDatabaseManager::CheckPlayerLogin(const FString& MemberID, const FString& MemberPW)
+bool UMyDatabaseManager::CheckPlayerData(const FString& MemberID, const FString& MemberPW)
 {
     if (!Database)
     {
@@ -323,7 +323,7 @@ bool UMyDatabaseManager::CheckPlayerLogin(const FString& MemberID, const FString
 
     const char* SQLCheckLogin = R"(
         SELECT EXISTS (
-            SELECT * FROM PlayerData
+            SELECT 1 FROM PlayerData
             WHERE PlayerID = ? AND PlayerPW = ?
         );
     )";
@@ -339,7 +339,6 @@ bool UMyDatabaseManager::CheckPlayerLogin(const FString& MemberID, const FString
     std::string PasswordStr = TCHAR_TO_UTF8(*MemberPW);
 
     unsigned char Hash[SHA256_DIGEST_LENGTH];
-
     SHA256((unsigned char*)PasswordStr.c_str(), PasswordStr.length(), Hash);
 
     FString HashString;
@@ -348,17 +347,17 @@ bool UMyDatabaseManager::CheckPlayerLogin(const FString& MemberID, const FString
         HashString += FString::Printf(TEXT("%02x"), Hash[i]);
     }
 
-
     sqlite3_bind_text(Statement, 1, TCHAR_TO_UTF8(*MemberID), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(Statement, 2, TCHAR_TO_UTF8(*HashString), -1, SQLITE_TRANSIENT);
 
     bool bExists = false;
     Result = sqlite3_step(Statement);
+
     if (Result == SQLITE_ROW)
     {
         bExists = sqlite3_column_int(Statement, 0) == 1;
     }
-    else
+    else if (Result != SQLITE_DONE)
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to check player: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
     }
@@ -366,6 +365,101 @@ bool UMyDatabaseManager::CheckPlayerLogin(const FString& MemberID, const FString
     sqlite3_finalize(Statement);
 
     return bExists;
+}
+
+bool UMyDatabaseManager::LogInPlayer(const FString& PlayerID)
+{
+    if (!Database)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Database is not open."));
+        return false;
+    }
+
+    // 이미 로그인된 상태인지 확인
+    const char* SQLCheckLogin = R"(
+        SELECT EXISTS (
+            SELECT 1 FROM LoggedInPlayers WHERE PlayerID = ?
+        );
+    )";
+    sqlite3_stmt* Statement;
+    int32 Result = sqlite3_prepare_v2(Database, SQLCheckLogin, -1, &Statement, nullptr);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare statement: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    sqlite3_bind_text(Statement, 1, TCHAR_TO_UTF8(*PlayerID), -1, SQLITE_TRANSIENT);
+
+    Result = sqlite3_step(Statement);
+    bool bExists = sqlite3_column_int(Statement, 0) == 1;
+    sqlite3_finalize(Statement);
+
+    if (bExists)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("User is already logged in."));
+        return false;
+    }
+
+    // 로그인 처리
+    const char* SQLInsertSession = R"(
+        INSERT INTO LoggedInPlayers (PlayerID) VALUES (?);
+    )";
+    Result = sqlite3_prepare_v2(Database, SQLInsertSession, -1, &Statement, nullptr);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare statement: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    sqlite3_bind_text(Statement, 1, TCHAR_TO_UTF8(*PlayerID), -1, SQLITE_TRANSIENT);
+
+    Result = sqlite3_step(Statement);
+    sqlite3_finalize(Statement);
+
+    if (Result != SQLITE_DONE)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to insert session: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    return true;
+}
+
+bool UMyDatabaseManager::LogOutPlayer(const FString& PlayerID)
+{
+    if (!Database)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Database is not open."));
+        return false;
+    }
+
+    const char* SQLDeleteSession = R"(
+        DELETE FROM LoggedInUsers WHERE PlayerID = ?;
+    )";
+    sqlite3_stmt* Statement;
+    int32 Result = sqlite3_prepare_v2(Database, SQLDeleteSession, -1, &Statement, nullptr);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare statement: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    sqlite3_bind_text(Statement, 1, TCHAR_TO_UTF8(*PlayerID), -1, SQLITE_TRANSIENT);
+
+    Result = sqlite3_step(Statement);
+    sqlite3_finalize(Statement);
+
+    if (Result != SQLITE_DONE)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to delete session: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    return true;
 }
 
 bool UMyDatabaseManager::GetPlayerData(const FString& MemberID, FString& OutMemberPW, FString& OutMemberNickname)

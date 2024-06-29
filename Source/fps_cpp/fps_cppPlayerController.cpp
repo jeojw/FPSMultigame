@@ -253,7 +253,26 @@ bool Afps_cppPlayerController::LoginPlayer(const FString& MemberID, const FStrin
 {
     if (Database)
     {
-        return Database->CheckPlayerLogin(MemberID, MemberPW);
+        return Database->CheckPlayerData(MemberID, MemberPW);
     }
     return false;
+}
+
+bool Afps_cppPlayerController::CheckMultipleLogin(const FString& MemberID)
+{
+    if (Database)
+    {
+        return Database->LogInPlayer(MemberID);
+    }
+    return false;
+}
+
+void Afps_cppPlayerController::SetPlayerID(const FString& _PlayerID)
+{
+    this->PlayerID = _PlayerID;
+}
+
+FString Afps_cppPlayerController::GetPlayerID()
+{
+    return this->PlayerID;
 }
