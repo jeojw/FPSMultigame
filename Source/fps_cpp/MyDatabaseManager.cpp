@@ -437,7 +437,7 @@ bool UMyDatabaseManager::LogOutPlayer(const FString& PlayerID)
     }
 
     const char* SQLDeleteSession = R"(
-        DELETE FROM LoggedInUsers WHERE PlayerID = ?;
+        DELETE FROM LoggedInPlayers WHERE PlayerID = ?;
     )";
     sqlite3_stmt* Statement;
     int32 Result = sqlite3_prepare_v2(Database, SQLDeleteSession, -1, &Statement, nullptr);

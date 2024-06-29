@@ -36,6 +36,7 @@ public:
 	bool SignupPlayer(const FString& MemberID, const FString& MemberPW, const FString& MemberNickname);
 	bool LoginPlayer(const FString& MemberID, const FString& MemberPW);
 	bool CheckMultipleLogin(const FString& MemberID);
+	bool LogoutPlayer(const FString& MemberID);
 
 	void SetPlayerID(const FString& _PlayerID);
 	FString GetPlayerID();

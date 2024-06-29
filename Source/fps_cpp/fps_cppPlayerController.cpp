@@ -258,6 +258,15 @@ bool Afps_cppPlayerController::LoginPlayer(const FString& MemberID, const FStrin
     return false;
 }
 
+bool Afps_cppPlayerController::LogoutPlayer(const FString& MemberID)
+{
+    if (Database)
+    {
+        return Database->LogOutPlayer(MemberID);
+    }
+    return false;
+}
+
 bool Afps_cppPlayerController::CheckMultipleLogin(const FString& MemberID)
 {
     if (Database)

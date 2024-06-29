@@ -44,7 +44,7 @@ public:
     bool LogInPlayer(const FString& PlayerID);
 
     UFUNCTION(BlueprintCallable, Category = "Database")
-    bool LogOutPlayer(const FString& SessionID);
+    bool LogOutPlayer(const FString& PlayerID);
 
     UFUNCTION(BlueprintCallable, Category = "Database")
     bool GetPlayerData(const FString& MemberID, FString& OutMemberPW, FString& OutMemberNickname);

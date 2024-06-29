@@ -170,6 +170,13 @@ void Afps_cppGameMode::PostLogin(APlayerController* NewPlayer)
 void Afps_cppGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
+
+	Afps_cppPlayerController* MyPlayerController = Cast<Afps_cppPlayerController>(Exiting);
+	if (MyPlayerController)
+	{
+		MyPlayerController->LogoutPlayer(MyPlayerController->GetPlayerID());
+		MyPlayerController->SetPlayerID("");
+	}
 }
 
 void Afps_cppGameMode::Respawn(Afps_cppPlayerController* PlayerController, Afps_cppPlayerState* PlayerState)
