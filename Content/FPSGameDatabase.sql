@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS RoomPlayers (
+   RoomID INTEGER NOT NULL,
+   PlayerID INTEGER NOT NULL,
+   PRIMARY KEY (RoomID, PlayerID),
+   FOREIGN KEY (RoomID) REFERENCES RoomDataFPSGame(id),
+   FOREIGN KEY (PlayerID) REFERENCES PlayerData(id)
+);

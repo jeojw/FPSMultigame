@@ -9,6 +9,7 @@
 #include "Sound/SoundWave.h"
 #include "GameFramework/GameModeBase.h"
 #include "Components/AudioComponent.h"
+#include "MyDatabaseManager.h"
 #include "fps_cppGameMode.generated.h"
 
 UCLASS(minimalapi)
@@ -18,6 +19,13 @@ class Afps_cppGameMode : public AGameModeBase
 
 	UPROPERTY()
 	float RespawnTime;
+
+	UPROPERTY()
+	UMyDatabaseManager* DatabaseManager;
+
+	void InitializeDatabase();
+	void LoadPlayerData(const FString& MemberID);
+	void SavePlayerData(const FString& MemberID, const FString& MemberPW, const FString& MemberNickname);
 
 public:
 	Afps_cppGameMode();

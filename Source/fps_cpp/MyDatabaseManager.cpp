@@ -2,7 +2,7 @@
 
 
 #include "MyDatabaseManager.h"
-
+#include "Misc/Paths.h"
 
 UMyDatabaseManager::UMyDatabaseManager()
     : Database(nullptr)
@@ -19,7 +19,7 @@ UMyDatabaseManager::~UMyDatabaseManager()
 
 bool UMyDatabaseManager::OpenDatabase(const FString& DatabasePath)
 {
-    FString FullPath = FPaths::ProjectDir() + DatabasePath;
+    FString FullPath = FPaths::Combine(FPaths::ProjectContentDir(), DatabasePath);
     int32 Result = sqlite3_open(TCHAR_TO_UTF8(*FullPath), &Database);
 
     if (Result != SQLITE_OK)
@@ -28,6 +28,29 @@ bool UMyDatabaseManager::OpenDatabase(const FString& DatabasePath)
         return false;
     }
     return true;
+}
+
+bool UMyDatabaseManager::ExecuteSQLFile(const FString& SQLFilePath)
+{
+    FString FullPath = FPaths::Combine(FPaths::ProjectContentDir(), SQLFilePath);
+    FString FileContent;
+
+    if (!FFileHelper::LoadFileToString(FileContent, *FullPath))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to load SQL file: %s"), *FullPath);
+        return false;
+    }
+
+    char* ErrorMessage = nullptr;
+    int32 Result = sqlite3_exec(Database, TCHAR_TO_UTF8(*FileContent), nullptr, nullptr, &ErrorMessage);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to execute SQL file: %s"), UTF8_TO_TCHAR(ErrorMessage));
+        sqlite3_free(ErrorMessage);
+        return false;
+    }
+
     return true;
 }
 
@@ -59,6 +82,189 @@ bool UMyDatabaseManager::CreateTable()
     return true;
 }
 
+bool UMyDatabaseManager::CheckDuplicateID(const FString& MemberID)
+{
+    if (!Database)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Database is not open."));
+        return false;
+    }
+
+    const char* SQLCheckIdDuplicate = R"(
+        SELECT EXISTS (
+            SELECT * FROM PlayerData
+            WHERE PlayerID = ?
+        );
+    )";
+    sqlite3_stmt* Statement;
+    int32 Result = sqlite3_prepare_v2(Database, SQLCheckIdDuplicate, -1, &Statement, nullptr);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare statement: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    sqlite3_bind_text(Statement, 1, TCHAR_TO_UTF8(*MemberID), -1, SQLITE_TRANSIENT);
+
+    Result = sqlite3_step(Statement);
+
+    bool bExists = false;
+    if (Result == SQLITE_ROW)
+    {
+        bExists = sqlite3_column_int(Statement, 0) == 1;
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to check for duplicate ID: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+    }
+
+    sqlite3_finalize(Statement);
+
+    return bExists;
+}
+
+bool UMyDatabaseManager::CheckDuplicateNickname(const FString& MemberNickname)
+{
+    if (!Database)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Database is not open."));
+        return false;
+    }
+
+    const char* SQLCheckIdDuplicate = R"(
+        SELECT EXISTS (
+            SELECT * FROM PlayerData
+            WHERE PlayerNickname = ?
+        );
+    )";
+    sqlite3_stmt* Statement;
+    int32 Result = sqlite3_prepare_v2(Database, SQLCheckIdDuplicate, -1, &Statement, nullptr);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare statement: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    sqlite3_bind_text(Statement, 1, TCHAR_TO_UTF8(*MemberNickname), -1, SQLITE_TRANSIENT);
+
+    Result = sqlite3_step(Statement);
+
+    bool bExists = false;
+    if (Result == SQLITE_ROW)
+    {
+        bExists = sqlite3_column_int(Statement, 0) == 1;
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to check for duplicate ID: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+    }
+
+    sqlite3_finalize(Statement);
+
+    return bExists;
+}
+
+bool UMyDatabaseManager::AddPlayerToRoom(int32 RoomID, int32 PlayerID)
+{
+    if (!Database)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Database is not open."));
+        return false;
+    }
+
+    const char* SQLInsertRoomUser = "INSERT INTO RoomPlayers (RoomID, PlayerID) VALUES (?, ?);";
+    sqlite3_stmt* Statement;
+    int32 Result = sqlite3_prepare_v2(Database, SQLInsertRoomUser, -1, &Statement, nullptr);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare statement: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    sqlite3_bind_int(Statement, 1, RoomID);
+    sqlite3_bind_int(Statement, 2, PlayerID);
+
+    Result = sqlite3_step(Statement);
+    sqlite3_finalize(Statement);
+
+    if (Result != SQLITE_DONE)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to add user to room: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    return true;
+}
+
+UFUNCTION(BlueprintCallable, Category = "Database")
+bool UMyDatabaseManager::DeletePlayerToRoom(int32 RoomID, int32 PlayerID)
+{
+    if (!Database)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Database is not open."));
+        return false;
+    }
+
+    const char* SQLInsertRoomUser = "DELETE FROM RoomPlayers WHERE RoomID =? AND PlayerID = ?;";
+    sqlite3_stmt* Statement;
+    int32 Result = sqlite3_prepare_v2(Database, SQLInsertRoomUser, -1, &Statement, nullptr);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare statement: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    sqlite3_bind_int(Statement, 1, RoomID);
+    sqlite3_bind_int(Statement, 2, PlayerID);
+
+    Result = sqlite3_step(Statement);
+    sqlite3_finalize(Statement);
+
+    if (Result != SQLITE_DONE)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to remove user from room: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    return true;
+}
+
+TArray<int32> UMyDatabaseManager::GetPlayersInRoom(int32 RoomID)
+{
+    TArray<int32> PlayerIDs;
+
+    if (!Database)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Database is not open."));
+        return PlayerIDs;
+    }
+
+    const char* SQLSelectUsersInRoom = "SELECT PlayerID FROM RoomPlayers WHERE RoomID = ?;";
+    sqlite3_stmt* Statement;
+    int32 Result = sqlite3_prepare_v2(Database, SQLSelectUsersInRoom, -1, &Statement, nullptr);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare statement: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return PlayerIDs;
+    }
+
+    sqlite3_bind_int(Statement, 1, RoomID);
+
+    while (sqlite3_step(Statement) == SQLITE_ROW)
+    {
+        int32 PlayerID = sqlite3_column_int(Statement, 0);
+        PlayerIDs.Add(PlayerID);
+    }
+
+    sqlite3_finalize(Statement);
+    return PlayerIDs;
+}
+
 bool UMyDatabaseManager::InsertPlayerData(const FString& MemberID, const FString& MemberPW, const FString& MemberNickname)
 {
     if (!Database)
@@ -67,7 +273,7 @@ bool UMyDatabaseManager::InsertPlayerData(const FString& MemberID, const FString
         return false;
     }
 
-    const char* SQLInsert = "INSERT INTO PlayerData (MemberID, MemberPW, MemberNickname) VALUES (?, ?, ?);";
+    const char* SQLInsert = "INSERT INTO PlayerData (PlayerID, PlayerPW, PlayerNickname) VALUES (?, ?, ?);";
     sqlite3_stmt* Statement;
     int32 Result = sqlite3_prepare_v2(Database, SQLInsert, -1, &Statement, nullptr);
 
@@ -89,8 +295,6 @@ bool UMyDatabaseManager::InsertPlayerData(const FString& MemberID, const FString
         UE_LOG(LogTemp, Error, TEXT("Failed to insert player data: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
         return false;
     }
-
-    return true;
 
     return true;
 }
@@ -129,6 +333,4 @@ bool UMyDatabaseManager::GetPlayerData(const FString& MemberID, FString& OutMemb
         sqlite3_finalize(Statement);
         return false;
     }
-
-    return false;
 }

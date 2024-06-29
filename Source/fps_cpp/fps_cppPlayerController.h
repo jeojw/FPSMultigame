@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "MyDatabaseManager.h"
 #include "fps_cppPlayerController.generated.h"
 
 /**
@@ -24,10 +25,15 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientInitializeUI();
 
+	void VisibleStartMenu();
 	void VisibleSignup();
 	void VisibleLogin();
 	void VisibleOption();
 	void VisiblePlayerUI();
+
+	bool CheckIdDuplicate(const FString& MemberID);
+	bool CheckNicknameDuplicate(const FString& MemberNickname);
+	bool SignupPlayer(const FString& MemberID, const FString& MemberNickPW, const FString& MemberNickname);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "UI")
@@ -61,6 +67,12 @@ private:
 	UPROPERTY(Transient)
 	UUserWidget* OptionWidgetInstance;
 
+	UPROPERTY()
+	UMyDatabaseManager* Database;
+
 	UFUNCTION()
 	void InitializeUI();
+
+	UFUNCTION()
+	void InitializeDatabase();
 };

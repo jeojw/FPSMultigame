@@ -20,6 +20,7 @@
 #include "Weapon_Base_Pistol.h"
 #include "Weapon_Base_M4.h"
 #include "fps_cppPlayerController.h"
+#include "Logging/LogMacros.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 

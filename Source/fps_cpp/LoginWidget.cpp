@@ -6,6 +6,8 @@
 
 void ULoginWidget::NativeConstruct()
 {
+	Super::NativeConstruct();
+
 	if (CheckLoginButton)
 	{
 		CheckLoginButton->OnClicked.AddDynamic(this, &ULoginWidget::CheckLogin);

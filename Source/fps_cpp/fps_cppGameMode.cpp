@@ -40,6 +40,8 @@ void Afps_cppGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+	InitializeDatabase();
+
 	if (!UGameplayStatics::DoesSaveGameExist(TEXT("SettingsSlot"), 0))
 	{
 		CreateDefaultSaveGame();
@@ -72,6 +74,57 @@ void Afps_cppGameMode::Tick(float DeltaSeconds)
 			{
 				Respawn(MyPlayerController, PlayerState);
 			}
+		}
+	}
+}
+
+void Afps_cppGameMode::InitializeDatabase()
+{
+	DatabaseManager = NewObject<UMyDatabaseManager>();
+
+	FString DatabasePath = FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("database.sqlite3"));
+
+	if (DatabaseManager->OpenDatabase(DatabasePath))
+	{
+		UE_LOG(LogTemp, Log, TEXT("Database opened successfully."));
+		DatabaseManager->CreateTable();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to open database."));
+	}
+}
+
+void Afps_cppGameMode::LoadPlayerData(const FString& MemberID)
+{
+	if (DatabaseManager)
+	{
+		FString MemberPW;
+		FString MemberNickname;
+
+		if (DatabaseManager->GetPlayerData(MemberID, MemberPW, MemberNickname))
+		{
+			UE_LOG(LogTemp, Log, TEXT("Player data retrieved: %s, %s"), *MemberPW, *MemberNickname);
+			// 게임 내에서 플레이어 데이터를 사용하는 로직 추가
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to retrieve player data."));
+		}
+	}
+}
+
+void Afps_cppGameMode::SavePlayerData(const FString& MemberID, const FString& MemberPW, const FString& MemberNickname)
+{
+	if (DatabaseManager)
+	{
+		if (DatabaseManager->InsertPlayerData(MemberID, MemberPW, MemberNickname))
+		{
+			UE_LOG(LogTemp, Log, TEXT("Player data inserted successfully."));
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to insert player data."));
 		}
 	}
 }
