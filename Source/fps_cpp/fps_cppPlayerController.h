@@ -33,7 +33,8 @@ public:
 
 	bool CheckIdDuplicate(const FString& MemberID);
 	bool CheckNicknameDuplicate(const FString& MemberNickname);
-	bool SignupPlayer(const FString& MemberID, const FString& MemberNickPW, const FString& MemberNickname);
+	bool SignupPlayer(const FString& MemberID, const FString& MemberPW, const FString& MemberNickname);
+	bool LoginPlayer(const FString& MemberID, const FString& MemberPW);
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "UI")

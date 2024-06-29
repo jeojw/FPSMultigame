@@ -31,11 +31,20 @@ class FPS_CPP_API ULoginWidget : public UUserWidget
 	
 	UPROPERTY()
 	Afps_cppPlayerController* PlayerController;
+	
+	FString IdString;
+	FString PasswordString;
 
 protected:
 	virtual void NativeConstruct() override;
 
 public:
+	UFUNCTION()
+	void OnIdTextChanged(const FText& Text);
+
+	UFUNCTION()
+	void OnPasswordTextChanged(const FText& Text);
+
 	UFUNCTION()
 	void CheckLogin();
 };

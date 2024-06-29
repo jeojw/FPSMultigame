@@ -3,6 +3,8 @@
 
 #include "MyDatabaseManager.h"
 #include "Misc/Paths.h"
+#include <openssl/sha.h>
+#include <string>
 
 UMyDatabaseManager::UMyDatabaseManager()
     : Database(nullptr)
@@ -283,8 +285,20 @@ bool UMyDatabaseManager::InsertPlayerData(const FString& MemberID, const FString
         return false;
     }
 
+    std::string PasswordStr = TCHAR_TO_UTF8(*MemberPW);
+
+    unsigned char Hash[SHA256_DIGEST_LENGTH];
+
+    SHA256((unsigned char*)PasswordStr.c_str(), PasswordStr.length(), Hash);
+
+    FString HashString;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
+    {
+        HashString += FString::Printf(TEXT("%02x"), Hash[i]);
+    }
+
     sqlite3_bind_text(Statement, 1, TCHAR_TO_UTF8(*MemberID), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 2, TCHAR_TO_UTF8(*MemberPW), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(Statement, 2, TCHAR_TO_UTF8(*HashString), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(Statement, 3, TCHAR_TO_UTF8(*MemberNickname), -1, SQLITE_TRANSIENT);
 
     Result = sqlite3_step(Statement);
@@ -297,6 +311,61 @@ bool UMyDatabaseManager::InsertPlayerData(const FString& MemberID, const FString
     }
 
     return true;
+}
+
+bool UMyDatabaseManager::CheckPlayerLogin(const FString& MemberID, const FString& MemberPW)
+{
+    if (!Database)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Database is not open."));
+        return false;
+    }
+
+    const char* SQLCheckLogin = R"(
+        SELECT EXISTS (
+            SELECT * FROM PlayerData
+            WHERE PlayerID = ? AND PlayerPW = ?
+        );
+    )";
+    sqlite3_stmt* Statement;
+    int32 Result = sqlite3_prepare_v2(Database, SQLCheckLogin, -1, &Statement, nullptr);
+
+    if (Result != SQLITE_OK)
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to prepare statement: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+        return false;
+    }
+
+    std::string PasswordStr = TCHAR_TO_UTF8(*MemberPW);
+
+    unsigned char Hash[SHA256_DIGEST_LENGTH];
+
+    SHA256((unsigned char*)PasswordStr.c_str(), PasswordStr.length(), Hash);
+
+    FString HashString;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
+    {
+        HashString += FString::Printf(TEXT("%02x"), Hash[i]);
+    }
+
+
+    sqlite3_bind_text(Statement, 1, TCHAR_TO_UTF8(*MemberID), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(Statement, 2, TCHAR_TO_UTF8(*HashString), -1, SQLITE_TRANSIENT);
+
+    bool bExists = false;
+    Result = sqlite3_step(Statement);
+    if (Result == SQLITE_ROW)
+    {
+        bExists = sqlite3_column_int(Statement, 0) == 1;
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to check player: %s"), UTF8_TO_TCHAR(sqlite3_errmsg(Database)));
+    }
+
+    sqlite3_finalize(Statement);
+
+    return bExists;
 }
 
 bool UMyDatabaseManager::GetPlayerData(const FString& MemberID, FString& OutMemberPW, FString& OutMemberNickname)

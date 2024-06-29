@@ -8,6 +8,16 @@ void ULoginWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	if (InputID)
+	{
+		InputID->OnTextChanged.AddDynamic(this, &ULoginWidget::OnIdTextChanged);
+	}
+
+	if (InputPassword)
+	{
+		InputPassword->OnTextChanged.AddDynamic(this, &ULoginWidget::OnPasswordTextChanged);
+	}
+
 	if (CheckLoginButton)
 	{
 		CheckLoginButton->OnClicked.AddDynamic(this, &ULoginWidget::CheckLogin);
@@ -16,7 +26,23 @@ void ULoginWidget::NativeConstruct()
 	PlayerController = Cast<Afps_cppPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
 }
 
+void ULoginWidget::OnIdTextChanged(const FText& Text)
+{
+	IdString = Text.ToString();
+}
+
+void ULoginWidget::OnPasswordTextChanged(const FText& Text)
+{
+	PasswordString = Text.ToString();
+}
+
 void ULoginWidget::CheckLogin()
 {
-	PlayerController->VisiblePlayerUI();
+	if (InputID && InputPassword)
+	{
+		if (PlayerController->LoginPlayer(InputID->GetText().ToString(), InputPassword->GetText().ToString()))
+		{
+			PlayerController->VisiblePlayerUI();
+		}
+	}
 }

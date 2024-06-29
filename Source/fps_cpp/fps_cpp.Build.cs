@@ -15,13 +15,15 @@ public class fps_cpp : ModuleRules
         string SQLiteLibPath = Path.Combine(ThirdPartyPath, "SQLite", "lib");
         string SQLiteBinPath = Path.Combine(ThirdPartyPath, "SQLite", "bin");
 
-        PublicIncludePaths.AddRange(new string[] {
-            SQLiteIncludePath
-        });
+        string SSLIncludePath = Path.Combine(ThirdPartyPath, "OpenSSL", "include");
+        string SSLiteLibPath = Path.Combine(ThirdPartyPath, "OpenSSL", "lib");
+        string SSLiteBinPath = Path.Combine(ThirdPartyPath, "OpenSSL", "bin");
 
         PublicIncludePaths.AddRange(new string[] {
-            Path.Combine(ModuleDirectory, "ThirdParty", "SQLite", "include")
+            SQLiteIncludePath,
+            SSLIncludePath
         });
+
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "NetCore",
             "UMG", "OnlineSubsystem", "OnlineSubsystemUtils", "Landscape", "Steamworks", "Paper2D", "Slate", "SlateCore", "SQLiteSupport" });
@@ -29,10 +31,19 @@ public class fps_cpp : ModuleRules
 
         PublicAdditionalLibraries.Add(Path.Combine(SQLiteLibPath, "sqlite3.lib"));
 
-        // 프로젝트 내의 DLL 파일 경로를 설정합니다.
         RuntimeDependencies.Add(Path.Combine(SQLiteBinPath, "sqlite3.dll"));
 
         // Delay-load the DLL, so it's not required at link time
         PublicDelayLoadDLLs.Add("sqlite3.dll");
+
+
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            PublicAdditionalLibraries.Add(Path.Combine(SSLiteLibPath, "libcrypto.lib"));
+            PublicAdditionalLibraries.Add(Path.Combine(SSLiteLibPath, "libssl.lib"));
+        }
+
+        RuntimeDependencies.Add(Path.Combine(SSLiteBinPath, "libcrypto-1_1-x64.dll"));
+        RuntimeDependencies.Add(Path.Combine(SSLiteBinPath, "libssl-1_1-x64.dll"));
     }
 }

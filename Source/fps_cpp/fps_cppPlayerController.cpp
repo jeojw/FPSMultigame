@@ -248,3 +248,12 @@ bool Afps_cppPlayerController::SignupPlayer(const FString& MemberID, const FStri
     }
     return false;
 }
+
+bool Afps_cppPlayerController::LoginPlayer(const FString& MemberID, const FString& MemberPW)
+{
+    if (Database)
+    {
+        return Database->CheckPlayerLogin(MemberID, MemberPW);
+    }
+    return false;
+}

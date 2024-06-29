@@ -38,6 +38,9 @@ public:
     bool InsertPlayerData(const FString& MemberID, const FString& MemberPW, const FString& MemberNickname);
 
     UFUNCTION(BlueprintCallable, Category = "Database")
+    bool CheckPlayerLogin(const FString& MemberID, const FString& MemberPW);
+
+    UFUNCTION(BlueprintCallable, Category = "Database")
     bool GetPlayerData(const FString& MemberID, FString& OutMemberPW, FString& OutMemberNickname);
 
     UFUNCTION(BlueprintCallable, Category = "Database")
