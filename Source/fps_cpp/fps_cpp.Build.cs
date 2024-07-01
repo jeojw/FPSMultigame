@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 using System.IO;
 using UnrealBuildTool;
@@ -26,7 +26,8 @@ public class fps_cpp : ModuleRules
 
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "NetCore",
-            "UMG", "OnlineSubsystem", "OnlineSubsystemUtils", "Landscape", "Steamworks", "Paper2D", "Slate", "SlateCore", "SQLiteSupport" });
+                                                            "UMG", "OnlineSubsystem", "OnlineSubsystemUtils", "Landscape", "Steamworks", "Paper2D", 
+                                                            "Slate", "SlateCore", "SQLiteSupport", "RHI","RenderCore","ImageWrapper" });
 
 
         PublicAdditionalLibraries.Add(Path.Combine(SQLiteLibPath, "sqlite3.lib"));

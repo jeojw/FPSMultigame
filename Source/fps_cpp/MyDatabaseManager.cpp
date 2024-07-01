@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "MyDatabaseManager.h"
@@ -375,7 +375,7 @@ bool UMyDatabaseManager::LogInPlayer(const FString& PlayerID)
         return false;
     }
 
-    // ÀÌ¹Ì ·Î±×ÀÎµÈ »óÅÂÀÎÁö È®ÀÎ
+    // ï¿½Ì¹ï¿½ ï¿½Î±ï¿½ï¿½Îµï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½
     const char* SQLCheckLogin = R"(
         SELECT EXISTS (
             SELECT 1 FROM LoggedInPlayers WHERE PlayerID = ?
@@ -402,7 +402,7 @@ bool UMyDatabaseManager::LogInPlayer(const FString& PlayerID)
         return false;
     }
 
-    // ·Î±×ÀÎ Ã³¸®
+    // ï¿½Î±ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½
     const char* SQLInsertSession = R"(
         INSERT INTO LoggedInPlayers (PlayerID) VALUES (?);
     )";

@@ -1,1 +1,1 @@
-DROP TABLE LoggedInPlayers
+DROP TABLE LoggedInUsers

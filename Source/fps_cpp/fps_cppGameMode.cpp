@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+ï»¿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "fps_cppGameMode.h"
 #include "UObject/ConstructorHelpers.h"
@@ -105,7 +105,7 @@ void Afps_cppGameMode::LoadPlayerData(const FString& MemberID)
 		if (DatabaseManager->GetPlayerData(MemberID, MemberPW, MemberNickname))
 		{
 			UE_LOG(LogTemp, Log, TEXT("Player data retrieved: %s, %s"), *MemberPW, *MemberNickname);
-			// °ÔÀÓ ³»¿¡¼­ ÇÃ·¹ÀÌ¾î µ¥ÀÌÅÍ¸¦ »ç¿ëÇÏ´Â ·ÎÁ÷ Ãß°¡
+			// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
 		}
 		else
 		{
@@ -150,19 +150,26 @@ void Afps_cppGameMode::PostLogin(APlayerController* NewPlayer)
 	Afps_cppPlayerController* MyPlayerController = Cast<Afps_cppPlayerController>(NewPlayer);
 	if (MyPlayerController)
 	{
-		MyPlayerController->ClientInitializeUI();
+		if (MyPlayerController->GetIsLogin()) {
+			MyPlayerController->InitializePlayerAfterLogin(DefaultPawnClass);
 
-		Afps_cppCharacter* Player = Cast<Afps_cppCharacter>(MyPlayerController->GetPawn());
-		Afps_cppPlayerState* PlayerState = MyPlayerController->GetPlayerState<Afps_cppPlayerState>();
+			Afps_cppCharacter* Player = Cast<Afps_cppCharacter>(MyPlayerController->GetPawn());
+			Afps_cppPlayerState* PlayerState = MyPlayerController->GetPlayerState<Afps_cppPlayerState>();
 
-		if (Player && PlayerState)
-		{
-			Player->InitializePlayerState();
-			UE_LOG(LogTemp, Log, TEXT("PlayerState initialized successfully in GameMode."));
+			if (Player && PlayerState)
+			{
+				Player->InitializePlayerState();
+				UE_LOG(LogTemp, Log, TEXT("PlayerState initialized successfully in GameMode."));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Player or PlayerState is null in GameMode PostLogin."));
+			}
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("Player or PlayerState is null in GameMode PostLogin."));
+			MyPlayerController->ClientShowLoginFailedMessage();
+			MyPlayerController->SetPlayerID("");
 		}
 	}
 }
@@ -188,7 +195,7 @@ void Afps_cppGameMode::Respawn(Afps_cppPlayerController* PlayerController, Afps_
 		FTimerHandle& RespawnTimerHandle = PlayerRespawnTimers.FindOrAdd(PlayerState);
 		GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, RespawnDelegate, RespawnTime, false);
 
-		// ºÎÈ° ¿äÃ»µÈ ÇÃ·¹ÀÌ¾î »óÅÂ¸¦ Ãß°¡
+		// ï¿½ï¿½È° ï¿½ï¿½Ã»ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½Â¸ï¿½ ï¿½ß°ï¿½
 		PlayerRespawnRequested.Add(PlayerState);
 	}
 }
@@ -225,7 +232,7 @@ void Afps_cppGameMode::RespawnFunction(Afps_cppPlayerController* PlayerControlle
 					NewPawn->ActivateObjectServer();
 				}
 
-				// ºÎÈ° ÈÄ ÇÃ·¡±× ¹× Å¸ÀÌ¸Ó Á¦°Å
+				// ï¿½ï¿½È° ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ Å¸ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½
 				PlayerRespawnRequested.Remove(PlayerState);
 				PlayerRespawnTimers.Remove(PlayerState);
 			}
@@ -239,7 +246,7 @@ void Afps_cppGameMode::RespawnFunction(Afps_cppPlayerController* PlayerControlle
 
 void Afps_cppGameMode::InitializeNetworkSettings()
 {
-	// ³×Æ®¿öÅ© ¼³Á¤ ÃÊ±âÈ­ (ÇÊ¿äÇÑ °æ¿ì Ãß°¡ ¼³Á¤)
+	// ï¿½ï¿½Æ®ï¿½ï¿½Å© ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ (ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ ï¿½ï¿½ï¿½ï¿½)
 	UE_LOG(LogTemp, Warning, TEXT("Network settings initialized"));
 }
 

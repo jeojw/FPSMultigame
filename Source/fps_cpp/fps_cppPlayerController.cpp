@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "fps_cppPlayerController.h"
@@ -70,8 +70,8 @@ void Afps_cppPlayerController::InitializeDatabase()
 {
     if (Database)
     {
-        FString DatabasePath = TEXT("Database/FPSGame"); // µ¥ÀÌÅÍº£ÀÌ½º ÆÄÀÏ °æ·Î
-        FString SQLFilePath = TEXT("Database/FPSGameDatabase.sql"); // SQL ÆÄÀÏ °æ·Î
+        FString DatabasePath = TEXT("Database/FPSGame"); // ï¿½ï¿½ï¿½ï¿½ï¿½Íºï¿½ï¿½Ì½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
+        FString SQLFilePath = TEXT("Database/FPSGameDatabase.sql"); // SQL ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
         if (Database->OpenDatabase(DatabasePath))
         {
             UE_LOG(LogTemp, Log, TEXT("Database opened successfully."));
@@ -262,7 +262,8 @@ bool Afps_cppPlayerController::LogoutPlayer(const FString& MemberID)
 {
     if (Database)
     {
-        return Database->LogOutPlayer(MemberID);
+        IsLogOut = Database->LogOutPlayer(MemberID);
+        return IsLogOut;
     }
     return false;
 }
@@ -271,7 +272,8 @@ bool Afps_cppPlayerController::CheckMultipleLogin(const FString& MemberID)
 {
     if (Database)
     {
-        return Database->LogInPlayer(MemberID);
+        IsLogin = Database->LogInPlayer(MemberID);
+        return IsLogin;
     }
     return false;
 }
@@ -284,4 +286,28 @@ void Afps_cppPlayerController::SetPlayerID(const FString& _PlayerID)
 FString Afps_cppPlayerController::GetPlayerID()
 {
     return this->PlayerID;
+}
+
+void Afps_cppPlayerController::InitializePlayerAfterLogin_Implementation(TSubclassOf<APawn> PawnClass)
+{
+    ClientInitializeUI();
+
+    FVector InitSpawnLocation = GetPawn()->GetActorLocation();
+    FRotator InitSpawnRotation = GetPawn()->GetActorRotation();
+
+    AActor* SpawnedActor = GetWorld()->SpawnActor(PawnClass, &InitSpawnLocation, &InitSpawnRotation);
+    if (SpawnedActor)
+    {
+        Possess(Cast<APawn>(SpawnedActor));
+    }
+}
+
+bool Afps_cppPlayerController::InitializePlayerAfterLogin_Validate(TSubclassOf<APawn> PawnClass)
+{
+    return true;
+}
+
+void Afps_cppPlayerController::ClientShowLoginFailedMessage_Implementation()
+{
+    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Login failed. Please check your ID and Password."));
 }

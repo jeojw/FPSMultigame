@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #pragma once
 
@@ -412,11 +412,17 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void SetLeanRightServer(bool LeanRight);
 
+	UFUNCTION(Client, Reliable)
+	void PlayShotSequenceClient(EItemTypeEnum WeaponType);
+
 	UFUNCTION(NetMulticast, Reliable)
 	void PlayShotSequenceMulticast(EItemTypeEnum WeaponType);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
 	void PlayShotSequenceServer(EItemTypeEnum WeaponType);
 
+
+	UFUNCTION(Client, Reliable)
+	void PlayReloadSequenceClient(EItemTypeEnum WeaponType);
 	UFUNCTION(NetMulticast, Reliable)
 	void PlayReloadSequenceMulticast(EItemTypeEnum WeaponType);
 	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
@@ -530,10 +536,12 @@ protected:
 	void Multicast_SetLeanLeftBooleans_Implementation(bool Left);
 	void Multicast_SetLeanRightBooleans_Implementation(bool Right);
 
+	void PlayShotSequenceClient_Implementation(EItemTypeEnum WeaponType);
 	void PlayShotSequenceMulticast_Implementation(EItemTypeEnum WeaponType);
 	void PlayShotSequenceServer_Implementation(EItemTypeEnum WeaponType);
 	bool PlayShotSequenceServer_Validate(EItemTypeEnum WeaponType);
 
+	void PlayReloadSequenceClient_Implementation(EItemTypeEnum WeaponType);
 	void PlayReloadSequenceMulticast_Implementation(EItemTypeEnum WeaponType);
 	void PlayReloadSequenceServer_Implementation(EItemTypeEnum WeaponType);
 	bool PlayReloadSequenceServer_Validate(EItemTypeEnum WeaponType);
@@ -550,9 +558,9 @@ protected:
 	void StopLeftHandIKServer_Implementation(bool bStop);
 	bool StopLeftHandIKServer_Validate(bool bStop);
 
-	void SetWeaponDataMulticast_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStopLeftHandIK, EItemTypeEnum WeaponType);
-	void SetWeaponDataServer_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStopLeftHandIK, EItemTypeEnum WeaponType);
-	bool SetWeaponDataServer_Validate(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStopLeftHandIK, EItemTypeEnum WeaponType);
+	void SetWeaponDataMulticast_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
+	void SetWeaponDataServer_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
+	bool SetWeaponDataServer_Validate(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStopK, EItemTypeEnum WeaponType);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

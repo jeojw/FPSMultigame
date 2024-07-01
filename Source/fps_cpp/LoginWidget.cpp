@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "LoginWidget.h"
@@ -15,6 +15,8 @@ void ULoginWidget::NativeConstruct()
 
 	if (InputPassword)
 	{
+		InputPassword->SetKeyboardType(EVirtualKeyboardType::Password);
+		InputPassword->SetIsPassword(true);
 		InputPassword->OnTextChanged.AddDynamic(this, &ULoginWidget::OnPasswordTextChanged);
 	}
 
@@ -40,6 +42,10 @@ void ULoginWidget::CheckLogin()
 {
 	if (InputID && InputPassword)
 	{
+		if (InputID->GetText().IsEmpty() || InputID->GetText().IsEmpty())
+		{
+			return;
+		}
 		if (PlayerController->LoginPlayer(InputID->GetText().ToString(), InputPassword->GetText().ToString()))
 		{
 			if (PlayerController->CheckMultipleLogin(InputID->GetText().ToString()))

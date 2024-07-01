@@ -12,14 +12,14 @@ void UPlayerWidget::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    // UI ¿ä¼Ò ÃÊ±âÈ­
+    // UI ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­
     if (HpBar)
     {
-        HpBar->SetPercent(1.0f);  // HP ¹Ù¸¦ 100%·Î ÃÊ±âÈ­
+        HpBar->SetPercent(1.0f);  // HP ï¿½Ù¸ï¿½ 100%ï¿½ï¿½ ï¿½Ê±ï¿½È­
     }
     if (CurBulletCounts)
     {
-        CurBulletCounts->SetText(FText::FromString("0"));  // ÃÊ±â ÃÑ¾Ë °³¼ö ¼³Á¤
+        CurBulletCounts->SetText(FText::FromString("0"));  // ï¿½Ê±ï¿½ ï¿½Ñ¾ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     }
     if (DeathMessage)
     {
@@ -30,7 +30,7 @@ void UPlayerWidget::NativeConstruct()
         RespawnBar->SetVisibility(ESlateVisibility::Hidden);
     }
 
-    // µô·¹ÀÌ¸¦ ÁÖ°í ÇÃ·¹ÀÌ¾î Ä³¸¯ÅÍ¸¦ °¡Á®¿È
+    // ï¿½ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½Ö°ï¿½ ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ Ä³ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     UpdatePlayerState();
 }
 
@@ -54,20 +54,20 @@ void UPlayerWidget::UpdatePlayerState()
 
         if (CurBulletCounts)
         {
-            CurBulletCounts->SetText(FText::FromString(FString::FromInt(CurPistols)));  // ÃÊ±â ÃÑ¾Ë °³¼ö ¼³Á¤
+            CurBulletCounts->SetText(FText::FromString(FString::FromInt(CurPistols)));  // ï¿½Ê±ï¿½ ï¿½Ñ¾ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         }
     }
     else
     {
-        // Player°¡ NullÀÎ °æ¿ì °æ°í ·Î±× Ãâ·Â ¹× Àç½Ãµµ
+        // Playerï¿½ï¿½ Nullï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Î±ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½Ãµï¿½
         UE_LOG(LogTemp, Warning, TEXT("Player is null in UpdatePlayerHealth, retrying..."));
-        PlayerHealth = 0.0f;  // ¿¹½Ã °ªÀ¸·Î ÃÊ±âÈ­
+        PlayerHealth = 0.0f;  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­
         if (CurBulletCounts)
         {
             CurBulletCounts->SetText(FText::FromString("0"));
         }
 
-        // Àç½Ãµµ: Å¸ÀÌ¸Ó¸¦ »ç¿ëÇÏ¿© ´Ù½Ã ½Ãµµ
+        // ï¿½ï¿½Ãµï¿½: Å¸ï¿½Ì¸Ó¸ï¿½ ï¿½ï¿½ï¿½ï¿½Ï¿ï¿½ ï¿½Ù½ï¿½ ï¿½Ãµï¿½
         FTimerHandle RetryHandle;
         GetWorld()->GetTimerManager().SetTimer(RetryHandle, this, &UPlayerWidget::UpdatePlayerState, 1.0f, false);
     }
@@ -79,8 +79,8 @@ void UPlayerWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
     if (PlayerState)
     {
-        CurPistols = PlayerState->GetInventory()->GetCurBullet(CurItemSelection); // ÇÃ·¹ÀÌ¾îÀÇ ÃÑ¾Ë °³¼ö ¾÷µ¥ÀÌÆ® (¿¹½Ã)
-        PlayerHealth = PlayerState->GetHealth(); // ÇÃ·¹ÀÌ¾îÀÇ Ã¼·Â ¾÷µ¥ÀÌÆ® (¿¹½Ã)
+        CurPistols = PlayerState->GetInventory()->GetCurBullet(CurItemSelection); // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ï¿½ï¿½ ï¿½Ñ¾ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® (ï¿½ï¿½ï¿½ï¿½)
+        PlayerHealth = PlayerState->GetHealth(); // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ï¿½ï¿½ Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® (ï¿½ï¿½ï¿½ï¿½)
         CurWeaponIcon = PlayerState->GetWeaponIcon();
 
         if (CurBulletCounts)
@@ -123,7 +123,7 @@ UTexture2D* UPlayerWidget::ConvertSpriteToTexture(UPaperSprite* Sprite)
 
     UE_LOG(LogTemp, Log, TEXT("ConvertSpriteToTexture: SourceTexture is valid"));
 
-    // SourceTextureÀÇ Å©±â¿Í Æ÷¸ËÀ» »ç¿ëÇÏ¿© »õ·Î¿î ÅØ½ºÃ³ »ý¼º
+    // SourceTextureï¿½ï¿½ Å©ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï¿ï¿½ ï¿½ï¿½ï¿½Î¿ï¿½ ï¿½Ø½ï¿½Ã³ ï¿½ï¿½ï¿½ï¿½
     UTexture2D* NewTexture = UTexture2D::CreateTransient(SourceTexture->GetSizeX(), SourceTexture->GetSizeY(), SourceTexture->GetPixelFormat());
     if (!NewTexture)
     {
@@ -131,7 +131,7 @@ UTexture2D* UPlayerWidget::ConvertSpriteToTexture(UPaperSprite* Sprite)
         return nullptr;
     }
 
-    // À¯È¿¼º °Ë»ç Ãß°¡
+    // ï¿½ï¿½È¿ï¿½ï¿½ ï¿½Ë»ï¿½ ï¿½ß°ï¿½
     if (!NewTexture->GetPlatformData() || !SourceTexture->GetPlatformData())
     {
         UE_LOG(LogTemp, Error, TEXT("ConvertSpriteToTexture: PlatformData is NULL"));
@@ -147,7 +147,7 @@ UTexture2D* UPlayerWidget::ConvertSpriteToTexture(UPaperSprite* Sprite)
     void* TextureData = nullptr;
     const void* SourceData = nullptr;
 
-    // Àá±Ý ¹× ÇØÁ¦ °úÁ¤¿¡¼­ ¿¹¿Ü Ã³¸®¸¦ Ãß°¡ÇÏ¿© ¾ÈÀüÇÏ°Ô °ü¸®
+    // ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ï¿½Ï¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½
     try
     {
         SourceData = SourceTexture->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_ONLY);

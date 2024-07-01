@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+ï»¿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "fps_cppCharacter.h"
 #include "Engine/LocalPlayer.h"
@@ -304,7 +304,7 @@ void Afps_cppCharacter::PossessedBy(AController* NewController)
 		}
 	}
 
-	// ¼ÒÀ¯±Ç ¼³Á¤
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	if (Afps_cppPlayerController* PC = Cast<Afps_cppPlayerController>(NewController))
 	{
 		SetOwner(PC);
@@ -835,6 +835,7 @@ void Afps_cppCharacter::RifleFire()
 								FPSMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil_FPS, &CurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
+									PlayShotSequenceClient(EItemTypeEnum::Rifle);
 									PlayShotSequenceMulticast(EItemTypeEnum::Rifle);
 								}
 								else
@@ -902,6 +903,7 @@ void Afps_cppCharacter::PistolFire()
 								FPSMesh->GetAnimInstance()->ProcessEvent(F_Procedural_Recoil_FPS, &CurrentStats.ProceduralRecoil);
 								if (HasAuthority())
 								{
+									PlayShotSequenceClient(EItemTypeEnum::Pistol);
 									PlayShotSequenceMulticast(EItemTypeEnum::Pistol);
 								}
 								else
@@ -1010,6 +1012,7 @@ void Afps_cppCharacter::Reload()
 					{
 						if (HasAuthority())
 						{
+							PlayReloadSequenceClient(EItemTypeEnum::Rifle);
 							PlayReloadSequenceMulticast(EItemTypeEnum::Rifle);
 						}
 						else
@@ -1479,19 +1482,19 @@ void Afps_cppCharacter::PlaySoundWithCooldownMulticast_Implementation(FVector Lo
 	if (GetWorld())
 	{
 		FTimerHandle& TimerHandle = (GetCharacterMovement()->MaxWalkSpeed < 600.0f) ? WalkTimerHandle : RunTimerHandle;
-		// TimerHandle ÃÊ±âÈ­
+		// TimerHandle ï¿½Ê±ï¿½È­
 		if (!TimerHandle.IsValid())
 		{
 			GetWorld()->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateLambda([this, &TimerHandle]()
 				{
-					// Å¸ÀÌ¸Ó°¡ ¸¸·áµÇ¾úÀ» ¶§ »ç¿îµå Àç»ý »óÅÂ¸¦ false·Î ¼³Á¤
+					// Å¸ï¿½Ì¸Ó°ï¿½ ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â¸ï¿½ falseï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 					if (TimerHandle.IsValid())
 					{
 						bSoundPlaying = false;
 					}
 				}), Delay, true);
 
-			// »ç¿îµå Àç»ý
+			// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
 		}
 		if (!bSoundPlaying)
 		{
@@ -1533,7 +1536,7 @@ void Afps_cppCharacter::SpawnActorToMulticast_Implementation(TSubclassOf<AActor>
 	UWorld* World = GetWorld();
 	if (World && Class)
 	{
-		// Actor¸¦ SpawnÇÕ´Ï´Ù.
+		// Actorï¿½ï¿½ Spawnï¿½Õ´Ï´ï¿½.
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.SpawnCollisionHandlingOverride = CollisionHandlingOverride;
 		SpawnParams.Instigator = GetInstigator();
@@ -1670,6 +1673,26 @@ void Afps_cppCharacter::Multicast_SetLeanRightBooleans_Implementation(bool Right
 	bLeanRight = Right;
 }
 
+void Afps_cppCharacter::PlayShotSequenceClient_Implementation(EItemTypeEnum WeaponType)
+{
+	if (WeaponType == EItemTypeEnum::Rifle)
+	{
+		AWeapon_Base_M4* FM4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
+		if (FM4)
+		{
+			FM4->GetSkeletalMeshComponent()->PlayAnimation(FM4->GetShotSequence(), false);
+		}
+
+	}
+	else if (WeaponType == EItemTypeEnum::Pistol)
+	{
+		AWeapon_Base_Pistol* FPistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
+		if (FPistol)
+		{
+			FPistol->GetSkeletalMeshComponent()->PlayAnimation(FPistol->GetShotSequence(), false);
+		}
+	}
+}
 
 void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum WeaponType)
 {
@@ -1681,16 +1704,7 @@ void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum W
 			M4->GetSkeletalMeshComponent()->PlayAnimation(M4->GetShotSequence(), false);
 			M4->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
 			M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
-		}
-			
-		AWeapon_Base_M4* FM4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
-		if (FM4)
-		{
-			FM4->GetSkeletalMeshComponent()->PlayAnimation(FM4->GetShotSequence(), false);
-			FM4->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
-			FM4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
-		}
-			
+		}	
 	}
 	else if (WeaponType == EItemTypeEnum::Pistol)
 	{
@@ -1701,25 +1715,38 @@ void Afps_cppCharacter::PlayShotSequenceMulticast_Implementation(EItemTypeEnum W
 			Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
 			Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
 		}
-			
-		AWeapon_Base_Pistol* FPistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
-		if (FPistol)
-		{
-			FPistol->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
-			FPistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
-			FPistol->GetSkeletalMeshComponent()->PlayAnimation(FPistol->GetShotSequence(), false);
-		}
 	}
 }
 
 void Afps_cppCharacter::PlayShotSequenceServer_Implementation(EItemTypeEnum WeaponType)
 {
+	PlayShotSequenceClient(WeaponType);
 	PlayShotSequenceMulticast(WeaponType);
 }
 
 bool Afps_cppCharacter::PlayShotSequenceServer_Validate(EItemTypeEnum WeaponType)
 {
 	return true;
+}
+
+void Afps_cppCharacter::PlayReloadSequenceClient_Implementation(EItemTypeEnum WeaponType)
+{
+	if (WeaponType == EItemTypeEnum::Rifle)
+	{
+		AWeapon_Base_M4* FM4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
+		if (FM4)
+		{
+			FM4->GetSkeletalMeshComponent()->PlayAnimation(FM4->GetReloadSequence(), false);
+		}
+	}
+	else if (WeaponType == EItemTypeEnum::Pistol)
+	{
+		AWeapon_Base_Pistol* FPistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
+		if (FPistol)
+		{
+			FPistol->GetSkeletalMeshComponent()->PlayAnimation(FPistol->GetReloadSequence(), false);
+		}
+	}
 }
 
 void Afps_cppCharacter::PlayReloadSequenceMulticast_Implementation(EItemTypeEnum WeaponType)
@@ -1733,12 +1760,6 @@ void Afps_cppCharacter::PlayReloadSequenceMulticast_Implementation(EItemTypeEnum
 			M4->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
 			M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
 		}
-
-		AWeapon_Base_M4* FM4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
-		if (FM4)
-		{
-			FM4->GetSkeletalMeshComponent()->PlayAnimation(FM4->GetReloadSequence(), false);
-		}
 	}
 	else if (WeaponType == EItemTypeEnum::Pistol)
 	{
@@ -1749,17 +1770,12 @@ void Afps_cppCharacter::PlayReloadSequenceMulticast_Implementation(EItemTypeEnum
 			Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
 			Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
 		}
-
-		AWeapon_Base_Pistol* FPistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
-		if (FPistol)
-		{
-			FPistol->GetSkeletalMeshComponent()->PlayAnimation(FPistol->GetReloadSequence(), false);
-		}
 	}
 }
 
 void Afps_cppCharacter::PlayReloadSequenceServer_Implementation(EItemTypeEnum WeaponType)
 {
+	PlayReloadSequenceClient(WeaponType);
 	PlayReloadSequenceMulticast(WeaponType);
 }
 
@@ -1830,67 +1846,60 @@ void Afps_cppCharacter::SetWeaponDataMulticast_Implementation(TSubclassOf<AActor
 
 	if (FPSWeaponBase && WeaponBase && CurrentWeaponClass)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Weapon data set: %s"), *CurrentWeaponClass->GetName());
+		FPSWeaponBase->SetChildActorClass(CurrentWeaponClass);
+        WeaponBase->SetChildActorClass(CurrentWeaponClass);
 
-		if (CurrentWeaponClass)
-		{
-			FPSWeaponBase->SetChildActorClass(CurrentWeaponClass);
-			WeaponBase->SetChildActorClass(CurrentWeaponClass);
+        AActor* WeaponBaseChild = WeaponBase->GetChildActor();
+        if (WeaponBaseChild)
+        {
+            // WeaponBaseChildì—ì„œ USkeletalMeshComponentë¥¼ ê°€ì ¸ì™€ì„œ ì„¤ì •
+            USkeletalMeshComponent* SkeletalMeshComponent = WeaponBaseChild->FindComponentByClass<USkeletalMeshComponent>();
+            if (SkeletalMeshComponent)
+            {
+				if (IsLocallyControlled())
+				{
+					SkeletalMeshComponent->SetOwnerNoSee(true);
+					SkeletalMeshComponent->SetOnlyOwnerSee(false);
+				}
+				else
+				{
+					SkeletalMeshComponent->SetOwnerNoSee(false);
+					SkeletalMeshComponent->SetOnlyOwnerSee(false);
+				}
+            }
+        }
 
-			AActor* WeaponBaseChild = WeaponBase->GetChildActor();
-			if (WeaponBaseChild)
-			{
-				WeaponBaseChild->SetOwner(this);
-				if (CurrentWeaponType == EItemTypeEnum::Rifle)
-				{
-					AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(WeaponBase->GetChildActor());
-					if (M4)
-					{
-						M4->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
-						M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
-					}
-				}
-				else if (CurrentWeaponType == EItemTypeEnum::Pistol)
-				{
-					AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(WeaponBase->GetChildActor());
-					if (Pistol)
-					{
-						Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(true);
-						Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(false);
-					}
-				}
-			}
+        AActor* FPSWeaponBaseChild = FPSWeaponBase->GetChildActor();
+        if (FPSWeaponBaseChild)
+        {
+            if (CurrentWeaponType == EItemTypeEnum::Rifle)
+            {
+                FPSWeaponBase->SetRelativeLocation(M4Location);
+                FPSWeaponBase->SetRelativeRotation(M4Rotation);
+            }
+            else if (CurrentWeaponType == EItemTypeEnum::Pistol)
+            {
+                FPSWeaponBase->SetRelativeLocation(PistolLocation);
+                FPSWeaponBase->SetRelativeRotation(PistolRotation);
+            }
 
-			AActor* FPSWeaponBaseChild = FPSWeaponBase->GetChildActor();
-			if (FPSWeaponBaseChild)
-			{
-				FPSWeaponBaseChild->SetOwner(this);
-				if (CurrentWeaponType == EItemTypeEnum::Rifle)
+            // FPSWeaponBaseChildì—ì„œ USkeletalMeshComponentë¥¼ ê°€ì ¸ì™€ì„œ ì„¤ì •
+            USkeletalMeshComponent* SkeletalMeshComponent = FPSWeaponBaseChild->FindComponentByClass<USkeletalMeshComponent>();
+            if (SkeletalMeshComponent)
+            {
+				if (IsLocallyControlled())
 				{
-					FPSWeaponBase->SetRelativeLocation(M4Location);
-					FPSWeaponBase->SetRelativeRotation(M4Rotation);
-					AWeapon_Base_M4* M4 = Cast<AWeapon_Base_M4>(FPSWeaponBase->GetChildActor());
-					if (M4)
-					{
-						M4->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
-						M4->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
-					}
+					SkeletalMeshComponent->SetOwnerNoSee(false);
+					SkeletalMeshComponent->SetOnlyOwnerSee(true);
 				}
-				else if (CurrentWeaponType == EItemTypeEnum::Pistol)
+				else
 				{
-					FPSWeaponBase->SetRelativeLocation(PistolLocation);
-					FPSWeaponBase->SetRelativeRotation(PistolRotation);
-					AWeapon_Base_Pistol* Pistol = Cast<AWeapon_Base_Pistol>(FPSWeaponBase->GetChildActor());
-					if (Pistol)
-					{
-						Pistol->GetSkeletalMeshComponent()->SetOwnerNoSee(false);
-						Pistol->GetSkeletalMeshComponent()->SetOnlyOwnerSee(true);
-					}
+					SkeletalMeshComponent->SetOwnerNoSee(false);
+					SkeletalMeshComponent->SetOnlyOwnerSee(false);
 				}
-			}
-		}
+            }
+        }
 	}
-	UE_LOG(LogTemp, Log, TEXT("Weapon data set: %s"), *WeaponClass->GetName());
 }
 
 void Afps_cppCharacter::StopLeftHandIKMulticast_Implementation(bool bStop)
