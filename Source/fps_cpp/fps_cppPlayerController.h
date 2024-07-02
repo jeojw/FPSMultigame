@@ -34,6 +34,7 @@ public:
 	void VisibleLogin();
 	void VisibleOption();
 	void VisiblePlayerUI();
+	void VisibleLobbyUI();
 
 	bool CheckIdDuplicate(const FString& MemberID);
 	bool CheckNicknameDuplicate(const FString& MemberNickname);
@@ -71,6 +72,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "UI")
 	TSubclassOf<UUserWidget> OptionWidgetClass;
 
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<UUserWidget> LobbyWidgetClass;
+
 private:
 	UPROPERTY(Transient)
 	UUserWidget* PlayerUIWidgetInstance;
@@ -87,11 +91,17 @@ private:
 	UPROPERTY(Transient)
 	UUserWidget* OptionWidgetInstance;
 
+	UPROPERTY(Transient)
+	UUserWidget* LobbyWidgetInstance;
+
 	UPROPERTY()
 	UMyDatabaseManager* Database;
 
 	UPROPERTY()
 	FString PlayerID;
+
+	UPROPERTY()
+	FString PlayerNickname;
 
 	UPROPERTY()
 	bool IsLogin;

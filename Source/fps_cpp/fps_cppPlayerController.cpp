@@ -40,6 +40,12 @@ Afps_cppPlayerController::Afps_cppPlayerController() : APlayerController()
     {
         OptionWidgetClass = OptionWidgetFinder.Class;
     }
+
+    static ConstructorHelpers::FClassFinder<UUserWidget> LobbyWidgetFinder(TEXT("/Game/ThirdPerson/Blueprints/Widget/BP_LobbyWidget"));
+    if (LobbyWidgetFinder.Succeeded())
+    {
+        OptionWidgetClass = LobbyWidgetFinder.Class;
+    }
 }
 
 void Afps_cppPlayerController::BeginPlay()
@@ -165,6 +171,16 @@ void Afps_cppPlayerController::InitializeUI()
             OptionWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
         }
     }
+
+    if (!LobbyWidgetInstance && LobbyWidgetClass)
+    {
+        LobbyWidgetInstance = CreateWidget<UUserWidget>(this, LobbyWidgetClass);
+        if (LobbyWidgetInstance)
+        {
+            LobbyWidgetInstance->AddToViewport();
+            LobbyWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+        }
+    }
 }
 
 void Afps_cppPlayerController::VisibleStartMenu()
@@ -212,6 +228,23 @@ void Afps_cppPlayerController::VisiblePlayerUI()
     if (LoginWidgetInstance && PlayerUIWidgetInstance)
     {
         PlayerUIWidgetInstance->SetVisibility(ESlateVisibility::Visible);
+        LoginWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
+
+        SetPause(false);
+        bShowMouseCursor = false;
+        bEnableClickEvents = false;
+        bEnableMouseOverEvents = false;
+
+        FInputModeGameOnly InputMode;
+        SetInputMode(InputMode);
+    }
+}
+
+void Afps_cppPlayerController::VisibleLobbyUI()
+{
+    if (LoginWidgetInstance && LobbyWidgetInstance)
+    {
+        LobbyWidgetInstance->SetVisibility(ESlateVisibility::Visible);
         LoginWidgetInstance->SetVisibility(ESlateVisibility::Hidden);
 
         SetPause(false);
