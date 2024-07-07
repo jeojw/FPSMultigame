@@ -7,6 +7,10 @@
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
+#include "fps_cppPlayerState.h"
+#include "fps_cppPlayerController.h"
 #include "LobbyWidget.generated.h"
 
 /**
@@ -16,6 +20,9 @@ UCLASS()
 class FPS_CPP_API ULobbyWidget : public UUserWidget
 {
 	GENERATED_BODY()
+
+	UPROPERTY(meta = (BindWidget))
+	UCanvasPanel* LobbyUICanvas;
 
 	UPROPERTY(meta = (BindWidget))
 	UImage* ProfileImage;
@@ -89,11 +96,35 @@ class FPS_CPP_API ULobbyWidget : public UUserWidget
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* MaxPage;
 
+	UPROPERTY()
+	Afps_cppPlayerController* PlayerController;
+
+	UPROPERTY()
+	Afps_cppPlayerState* FPSPlayerState;
+
 
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 public:
+	virtual void SetVisibility(ESlateVisibility InVisibility) override;
 
+	UFUNCTION()
+	void LogOut();
+
+	UFUNCTION()
+	void SetOptions();
 	
+	UFUNCTION()
+	void MakeRoom();
+
+	UFUNCTION()
+	void EntranceRoom();
+
+	UFUNCTION()
+	void InitializePlayerController();
+
+	UFUNCTION()
+	void UpdatePlayerInfo();
 };

@@ -11,24 +11,22 @@
 #include "WeaponStatsStruct.h"
 #include "PaperSprite.h"
 #include "DynamicInventoryItem.h"
+#include "Engine/Texture2D.h"
 #include "fps_cppPlayerState.generated.h"
 
 /**
  * 
  */
 
-class Afps_cppCharacter;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerStateUpdated);
 
 UCLASS()
 class FPS_CPP_API Afps_cppPlayerState : public APlayerState
 {
 	GENERATED_BODY()
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UInventory* InventoryComponent;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UDataTable* DT_ItemData;
 
 	UPROPERTY(VisibleAnywhere, Replicated, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	float MaxHealth;
@@ -39,32 +37,28 @@ class FPS_CPP_API Afps_cppPlayerState : public APlayerState
 	UPROPERTY(VisibleAnywhere, Replicated, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	bool IsDead;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	int CurrentItemSelection;
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Player_ID, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	FString Player_ID;
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<AActor> CurrentWeaponClass;
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_PlayerNickname, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	FString Player_Nickname;
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	FWeaponStatsStruct CurrentStats;
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_ProfileImage, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	UTexture2D* ProfileImage;
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	EAnimStateEnum CurrentAnimState;
+	UFUNCTION()
+	void OnRep_Player_ID();
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	bool StopLeftHandIK;
+	UFUNCTION()
+	void OnRep_PlayerNickname();
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	EItemTypeEnum CurrentWeaponType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UAnimMontage* CurrentReloadAnimation;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UPaperSprite* WeaponIcon;
+	UFUNCTION()
+	void OnRep_ProfileImage();
 
 public:
     Afps_cppPlayerState();
+
+	FOnPlayerStateUpdated OnPlayerStateUpdated;
 
 	UInventory* GetInventory() const { return InventoryComponent; }
 
@@ -87,48 +81,27 @@ public:
 	bool GetIsDead() const { return IsDead; }
 	void SetIsDead(bool _IsDead) { IsDead = _IsDead; }
 
-	bool GetStopHandLeftIK() const {return StopLeftHandIK;}
+	UFUNCTION(BlueprintCallable, Category = "Profile")
+	FString GetPlayer_Id() const { return Player_ID; }
+	void SetPlayer_Id(const FString& _id);
 
-	int GetCurrentItemSelection() const { return CurrentItemSelection; }
-	void SetCurrentItemSelection(int CurItem) { CurrentItemSelection = CurItem; }
+	UFUNCTION(BlueprintCallable, Category = "Profile")
+	FString GetPlayerNickname() const { return Player_Nickname; }
+	void SetPlayerNickname(const FString& _nickname);
 
-	TSubclassOf<AActor> GetCurrentWeaponClass() const { return CurrentWeaponClass; }
-	void SetCurrentWeaponClass(TSubclassOf<AActor> _Weapon) { CurrentWeaponClass = _Weapon; }
-
-	FWeaponStatsStruct GetCurrentStats() const { return CurrentStats; }
-	void SetCurrentStats(FWeaponStatsStruct _Stats) { CurrentStats = _Stats; }
-
-	EItemTypeEnum GetCurrentWeaponType() const { return CurrentWeaponType; }
-	void SetCurretnWeaponType(EItemTypeEnum _Weapontype) { CurrentWeaponType = _Weapontype; }
-
-	UAnimMontage* GetCurrentReloadAnimation() const { return CurrentReloadAnimation; }
-	void SetCurrentReloadAnimation(UAnimMontage* _CurrentReloadAnimation) { CurrentReloadAnimation = _CurrentReloadAnimation; }
-
-	UPaperSprite* GetWeaponIcon() const { return WeaponIcon; }
-	void SetWeaponIcon(UPaperSprite* NewIcon) { WeaponIcon = NewIcon; }
-
-	EAnimStateEnum GetAnimState() const { return CurrentAnimState; }
-	void SetAnimState(EAnimStateEnum CurAnimState) { CurrentAnimState = CurAnimState; }
-
-	UFUNCTION(NetMulticast, Reliable)
-	void SetWeaponDataMulticast(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
+	UFUNCTION(BlueprintCallable, Category = "Profile")
+	UTexture2D* GetProfileImage() const { return ProfileImage; }
+	void SetProfileImage(UTexture2D* _img);
 
 	UFUNCTION(Server, Reliable, WithValidation)
-	void SetWeaponDataServer(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
+	void SetPlayerInfoServer(const FString& _playerid, const FString& _nickname, UTexture2D* _profileImage);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void StopLeftHandIKMulticast(bool bStop);
+	void SetPlayerInfoMulticast(const FString& _playerid, const FString& _nickname, UTexture2D* _profileImage);
 
-	UFUNCTION(Server, Reliable, WithValidation)
-	void StopLeftHandIKServer(bool bStop);
-
-	void StopLeftHandIKMulticast_Implementation(bool bStop);
-	void StopLeftHandIKServer_Implementation(bool bStop);
-	bool StopLeftHandIKServer_Validate(bool bStop);
-
-	void SetWeaponDataMulticast_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
-	void SetWeaponDataServer_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
-	bool SetWeaponDataServer_Validate(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType);
+	void SetPlayerInfoServer_Implementation(const FString& _playerid, const FString& _nickname, UTexture2D* _profileImage);
+	bool SetPlayerInfoServer_Validate(const FString& _playerid, const FString& _nickname, UTexture2D* _profileImage);
+	void SetPlayerInfoMulticast_Implementation(const FString& _playerid, const FString& _nickname, UTexture2D* _profileImage);
 
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

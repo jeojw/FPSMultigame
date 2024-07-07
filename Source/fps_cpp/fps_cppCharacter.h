@@ -24,7 +24,6 @@
 #include "fps_cppPlayerState.h"
 #include "fps_cppCharacter.generated.h"
 
-
 class UPlayerInterfaceImplement;
 class USpringArmComponent;
 class UCameraComponent;

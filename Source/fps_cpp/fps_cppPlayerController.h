@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "MyDatabaseManager.h"
+#include "fps_cppPlayerState.h"
 #include "fps_cppPlayerController.generated.h"
 
 /**
@@ -18,6 +19,7 @@ class FPS_CPP_API Afps_cppPlayerController : public APlayerController
 public:
 	Afps_cppPlayerController();
 
+	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* aPawn) override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -28,6 +30,9 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void ClientInitializeUI();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerInitializeUI();
 
 	void VisibleStartMenu();
 	void VisibleSignup();
@@ -40,11 +45,13 @@ public:
 	bool CheckNicknameDuplicate(const FString& MemberNickname);
 	bool SignupPlayer(const FString& MemberID, const FString& MemberPW, const FString& MemberNickname);
 	bool LoginPlayer(const FString& MemberID, const FString& MemberPW);
+	UTexture2D* LoadTextureFromFile(const FString& FilePath);
 	bool CheckMultipleLogin(const FString& MemberID);
-	bool LogoutPlayer(const FString& MemberID);
-
-	void SetPlayerID(const FString& _PlayerID);
-	FString GetPlayerID();
+	bool LogoutPlayer();
+	
+	/*void SetProfileImage();*/
+	/*bool CreateRoom();
+	bool EntraceRoom();*/
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void InitializePlayerAfterLogin(TSubclassOf<APawn> PawnClass);
@@ -55,6 +62,13 @@ public:
 	void InitializePlayerAfterLogin_Implementation(TSubclassOf<APawn> PawnClass);
 	bool InitializePlayerAfterLogin_Validate(TSubclassOf<APawn> PawnClass);
 	void ClientShowLoginFailedMessage_Implementation();
+
+	void ClientInitializeUI_Implementation();
+	void ServerInitializeUI_Implementation();
+	bool ServerInitializeUI_Validate();
+
+	UFUNCTION()
+	Afps_cppPlayerState* GetFPSPlayerState() const { return Cast<Afps_cppPlayerState>(PlayerState); }
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "UI")
@@ -76,32 +90,29 @@ protected:
 	TSubclassOf<UUserWidget> LobbyWidgetClass;
 
 private:
-	UPROPERTY(Transient)
+	UPROPERTY()
 	UUserWidget* PlayerUIWidgetInstance;
 
-	UPROPERTY(Transient)
+	UPROPERTY()
 	UUserWidget* SignupWidgetInstance;
 
-	UPROPERTY(Transient)
+	UPROPERTY()
 	UUserWidget* LoginWidgetInstance;
 
-	UPROPERTY(Transient)
+	UPROPERTY()
 	UUserWidget* StartWidgetInstance;
 
-	UPROPERTY(Transient)
+	UPROPERTY()
 	UUserWidget* OptionWidgetInstance;
 
-	UPROPERTY(Transient)
+	UPROPERTY()
 	UUserWidget* LobbyWidgetInstance;
 
 	UPROPERTY()
 	UMyDatabaseManager* Database;
 
 	UPROPERTY()
-	FString PlayerID;
-
-	UPROPERTY()
-	FString PlayerNickname;
+	Afps_cppPlayerState* FPSPlayerState;
 
 	UPROPERTY()
 	bool IsLogin;
@@ -114,4 +125,7 @@ private:
 
 	UFUNCTION()
 	void InitializeDatabase();
+
+	UFUNCTION()
+	void InitializePlayerState();
 };

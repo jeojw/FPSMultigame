@@ -47,8 +47,6 @@ void UPlayerWidget::UpdatePlayerState()
     {
         PlayerMaxHealth = PlayerState->GetMaxHealth();
         PlayerHealth = PlayerState->GetHealth();
-        CurItem = PlayerState->GetCurrentWeaponType();
-        CurItemSelection = PlayerState->GetCurrentItemSelection();
         CurPistols = PlayerState->GetInventory()->GetCurBullet(CurItemSelection);
         CurWeaponIcon = LoadObject<UPaperSprite>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/Weapons/Weapon_Icons/Weapon_Icon_WeaponIcon_12"));
 
@@ -81,7 +79,6 @@ void UPlayerWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
     {
         CurPistols = PlayerState->GetInventory()->GetCurBullet(CurItemSelection); // �÷��̾��� �Ѿ� ���� ������Ʈ (����)
         PlayerHealth = PlayerState->GetHealth(); // �÷��̾��� ü�� ������Ʈ (����)
-        CurWeaponIcon = PlayerState->GetWeaponIcon();
 
         if (CurBulletCounts)
         {

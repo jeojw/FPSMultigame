@@ -9,63 +9,73 @@
 
 Afps_cppPlayerState::Afps_cppPlayerState()
 {
-	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
+	bReplicates = true;
 
-	CurrentAnimState = EAnimStateEnum::Rifle;
-	CurrentItemSelection = 0;
-	DT_ItemData = LoadObject<UDataTable>(nullptr, TEXT("/Game/ThirdPerson/Blueprints/inventory/ItemData/DT_ItemData"));
+	InventoryComponent = CreateDefaultSubobject<UInventory>(TEXT("InventoryComponent"));
 
 	MaxHealth = 200.0f;
 	Health = 200.0f;
 	IsDead = false;
 }
 
-void Afps_cppPlayerState::SetWeaponDataServer_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType)
-{
-	SetWeaponDataMulticast(WeaponClass, Stats, AnimState, bStop, WeaponType);
-}
-
-bool Afps_cppPlayerState::SetWeaponDataServer_Validate(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType)
-{
-	return true;
-}
-
-void Afps_cppPlayerState::SetWeaponDataMulticast_Implementation(TSubclassOf<AActor> WeaponClass, FWeaponStatsStruct Stats, EAnimStateEnum AnimState, bool bStop, EItemTypeEnum WeaponType)
-{
-	CurrentWeaponClass = WeaponClass;
-	CurrentStats = Stats;
-	CurrentAnimState = AnimState;
-	StopLeftHandIK = bStop;
-	CurrentWeaponType = WeaponType;
-	UE_LOG(LogTemp, Log, TEXT("Weapon data set: %s"), *WeaponClass->GetName());
-}
-
-void Afps_cppPlayerState::StopLeftHandIKMulticast_Implementation(bool bStop)
-{
-	StopLeftHandIK = bStop;
-}
-
-void Afps_cppPlayerState::StopLeftHandIKServer_Implementation(bool bStop)
-{
-	StopLeftHandIKMulticast(bStop);
-}
-
-bool Afps_cppPlayerState::StopLeftHandIKServer_Validate(bool bStop)
-{
-	return true;
-}
-
 void Afps_cppPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	DOREPLIFETIME(Afps_cppPlayerState, InventoryComponent);
 	DOREPLIFETIME(Afps_cppPlayerState, MaxHealth);
 	DOREPLIFETIME(Afps_cppPlayerState, Health);
 	DOREPLIFETIME(Afps_cppPlayerState, IsDead);
 
-	DOREPLIFETIME(Afps_cppPlayerState, CurrentWeaponClass);
-	DOREPLIFETIME(Afps_cppPlayerState, CurrentStats);
-	DOREPLIFETIME(Afps_cppPlayerState, CurrentAnimState);
-	DOREPLIFETIME(Afps_cppPlayerState, StopLeftHandIK);
-	DOREPLIFETIME(Afps_cppPlayerState, CurrentWeaponType);
+	DOREPLIFETIME(Afps_cppPlayerState, Player_ID);
+	DOREPLIFETIME(Afps_cppPlayerState, Player_Nickname);
+	DOREPLIFETIME(Afps_cppPlayerState, ProfileImage);
+}
+
+void Afps_cppPlayerState::SetPlayerInfoServer_Implementation(const FString& _playerid, const FString& _nickname, UTexture2D* _profileImage)
+{
+	SetPlayerInfoMulticast(_playerid, _nickname, _profileImage);
+}
+bool Afps_cppPlayerState::SetPlayerInfoServer_Validate(const FString& _playerid, const FString& _nickname, UTexture2D* _profileImage)
+{
+	return true;
+}
+void Afps_cppPlayerState::SetPlayerInfoMulticast_Implementation(const FString& _playerid, const FString& _nickname, UTexture2D* _profileImage)
+{
+	SetPlayer_Id(_playerid);
+	SetPlayerNickname(_nickname);
+	SetProfileImage(_profileImage);
+}
+
+void Afps_cppPlayerState::SetPlayer_Id(const FString& NewID)
+{
+	Player_ID = NewID;
+	OnRep_Player_ID();
+}
+
+void Afps_cppPlayerState::SetPlayerNickname(const FString& NewNickname)
+{
+	Player_Nickname = NewNickname;
+	OnRep_PlayerNickname();
+}
+
+void Afps_cppPlayerState::SetProfileImage(UTexture2D* NewProfileImage)
+{
+	ProfileImage = NewProfileImage;
+	OnRep_ProfileImage();
+}
+
+void Afps_cppPlayerState::OnRep_Player_ID()
+{
+	OnPlayerStateUpdated.Broadcast();
+}
+
+void Afps_cppPlayerState::OnRep_PlayerNickname()
+{
+	OnPlayerStateUpdated.Broadcast();
+}
+
+void Afps_cppPlayerState::OnRep_ProfileImage()
+{
+	OnPlayerStateUpdated.Broadcast();
 }

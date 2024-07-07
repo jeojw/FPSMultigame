@@ -50,8 +50,9 @@ void ULoginWidget::CheckLogin()
 		{
 			if (PlayerController->CheckMultipleLogin(InputID->GetText().ToString()))
 			{
-				PlayerController->SetPlayerID(InputID->GetText().ToString());
-				PlayerController->VisiblePlayerUI();
+				InputID->SetText(FText::FromString(""));
+				InputPassword->SetText(FText::FromString(""));
+				PlayerController->VisibleLobbyUI();
 			}
 		}
 	}

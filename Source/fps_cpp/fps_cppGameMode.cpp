@@ -16,9 +16,7 @@ Afps_cppGameMode::Afps_cppGameMode() : AGameModeBase()
 	PrimaryActorTick.bCanEverTick = true;
 
 	PlayerControllerClass = Afps_cppPlayerController::StaticClass();
-
 	PlayerStateClass = Afps_cppPlayerState::StaticClass();
-
 	DefaultPawnClass = Afps_cppCharacter::StaticClass();
 
 	static ConstructorHelpers::FObjectFinder<USoundWave> StartBGMFinder(TEXT("/Game/FPS_BGM/Phat_Phrog_Studio_-_Dropship_Assault_-_Uprising_Protocol_-_LOOP"));
@@ -169,7 +167,6 @@ void Afps_cppGameMode::PostLogin(APlayerController* NewPlayer)
 		else
 		{
 			MyPlayerController->ClientShowLoginFailedMessage();
-			MyPlayerController->SetPlayerID("");
 		}
 	}
 }
@@ -181,8 +178,7 @@ void Afps_cppGameMode::Logout(AController* Exiting)
 	Afps_cppPlayerController* MyPlayerController = Cast<Afps_cppPlayerController>(Exiting);
 	if (MyPlayerController)
 	{
-		MyPlayerController->LogoutPlayer(MyPlayerController->GetPlayerID());
-		MyPlayerController->SetPlayerID("");
+		MyPlayerController->LogoutPlayer();
 	}
 }
 

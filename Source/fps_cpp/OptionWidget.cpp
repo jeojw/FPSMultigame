@@ -34,7 +34,7 @@ void UOptionWidget::NativeConstruct()
         TextureComboBox->AddOption(TEXT("Epic"));
         TextureComboBox->AddOption(TEXT("Cinematic"));
 
-        // ±âº»°ª ¼³Á¤ (¼±ÅÃµÇÁö ¾ÊÀº »óÅÂ·Î µÎ·Á¸é ÀÌ ÁÙÀ» »ý·«)
+        // ï¿½âº»ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Â·ï¿½ ï¿½Î·ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½)
         TextureComboBox->SetSelectedOption(TEXT("High"));
 
         TextureComboBox->OnSelectionChanged.AddDynamic(this, &UOptionWidget::TextureQualityChanged);
